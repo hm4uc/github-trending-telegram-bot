@@ -18,7 +18,6 @@ A serverless Telegram Bot that tracks top trending repositories on GitHub, summa
 ├── ai.js              # Gemini API helper to summarize repository data
 ├── main.js            # Main orchestrator script to run the bot locally
 ├── scraper.js         # Scrapes the trending list and reads README files
-├── test.js            # Quick test script for Telegram API connection
 ├── vercel.json        # Vercel cron and configuration file
 ├── package.json       # Node.js dependencies
 └── .gitignore         # Ignores local environment files and node_modules
@@ -36,8 +35,8 @@ A serverless Telegram Bot that tracks top trending repositories on GitHub, summa
 
 1. Clone the repository and navigate to the project directory:
    ```bash
-   git clone <your-repo-url>
-   cd <repo-name>
+   git clone https://github.com/hm4uc/github-trending-telegram-bot.git
+   cd github-trending-telegram-bot
    ```
 
 2. Install dependencies:
@@ -59,11 +58,6 @@ A serverless Telegram Bot that tracks top trending repositories on GitHub, summa
 To scrape, summarize, and send the update to Telegram manually:
 ```bash
 node main.js
-```
-
-To test only the Telegram integration:
-```bash
-node test.js
 ```
 
 ### Deploying to Vercel
