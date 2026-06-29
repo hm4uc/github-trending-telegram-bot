@@ -34,12 +34,34 @@ export default async function handler(req, res) {
     res.status(200).json({ ok: true });
 }
 
-// Hàm phụ gửi tin
+// Hàm phụ gửi tin với cơ chế fallback nếu lỗi Markdown
 async function sendMessage(chatId, text, token) {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'Markdown' })
-    });
+    try {
+        let response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                chat_id: chatId, 
+                text: text, 
+                parse_mode: 'Markdown',
+                disable_web_page_preview: true 
+            })
+        });
+
+        if (!response.ok) {
+            console.warn('⚠️ Gửi Markdown thất bại, thử lại dưới dạng văn bản thường...');
+            await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    chat_id: chatId, 
+                    text: text,
+                    disable_web_page_preview: true 
+                })
+            });
+        }
+    } catch (error) {
+        console.error('❌ Lỗi kết nối Telegram:', error);
+    }
 }

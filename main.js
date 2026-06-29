@@ -11,7 +11,7 @@ async function sendTelegramMessage(textMessage) {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
 
     try {
-        const response = await fetch(url, {
+        let response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -22,10 +22,26 @@ async function sendTelegramMessage(textMessage) {
             })
         });
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.warn(`⚠️ Gửi với định dạng Markdown thất bại: ${errorText}`);
+            console.log('🔄 Thử gửi lại dưới dạng văn bản thường (plain text)...');
+
+            response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: CHAT_ID,
+                    text: textMessage,
+                    disable_web_page_preview: true
+                })
+            });
+        }
+
         if (response.ok) {
             console.log('✅ BINGO! Đã gửi tin nhắn Telegram thành công!');
         } else {
-            console.log('❌ Lỗi từ Telegram:', await response.text());
+            console.error('❌ Lỗi từ Telegram:', await response.text());
         }
     } catch (error) {
         console.error('❌ Lỗi kết nối Telegram:', error);

@@ -1,9 +1,13 @@
 import * as cheerio from 'cheerio';
 
+const HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+};
+
 // Hàm phụ: Chui vào link của từng repo để cào text trong file README
 async function getReadmeText(repoUrl) {
     try {
-        const response = await fetch(repoUrl);
+        const response = await fetch(repoUrl, { headers: HEADERS });
         const html = await response.text();
         const $ = cheerio.load(html);
 
@@ -25,16 +29,13 @@ export async function getGithubTrending() {
     const url = 'https://github.com/trending';
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: HEADERS });
         const html = await response.text();
         const $ = cheerio.load(html);
-        const trendingRepos = [];
 
-        // Lấy top 5 repo (Dùng .toArray() để có thể chạy vòng lặp bất đồng bộ async/await)
+        // Lấy top 5 repo chạy song song để tăng tốc độ
         const rows = $('article.Box-row').slice(0, 5).toArray();
-
-        for (let i = 0; i < rows.length; i++) {
-            const element = rows[i];
+        const promises = rows.map(async (element, i) => {
             const titleElement = $(element).find('h2.h3 a');
             const relativeLink = titleElement.attr('href');
             const repoName = titleElement.text().replace(/\s+/g, '').trim();
@@ -44,20 +45,29 @@ export async function getGithubTrending() {
             const language = $(element).find('span[itemprop="programmingLanguage"]').text().trim();
 
             console.log(`📥 Đang đọc README của dự án: ${repoName}...`);
-            // Chờ gọi hàm phụ để lấy README
             const readme = await getReadmeText(fullLink);
 
-            trendingRepos.push({
+            return {
                 top: i + 1,
                 name: repoName,
                 language: language || 'Không xác định',
                 description: description,
                 link: fullLink,
-                readme: readme // Gắn thêm ngữ cảnh khổng lồ vào đây!
-            });
-        }
+                readme: readme
+            };
+        });
+
+        const trendingRepos = await Promise.all(promises);
+        
+        // Sắp xếp lại theo thứ tự xếp hạng (top) do bất đồng bộ có thể làm lệch thứ tự
+        trendingRepos.sort((a, b) => a.top - b.top);
 
         console.log('\n✅ HOÀN TẤT!');
+
+        if (trendingRepos.length === 0) {
+            console.log('⚠️ Không tìm thấy dự án trending nào.');
+            return [];
+        }
 
         // In thử dự án Top 1 ra xem dữ liệu đã "đầy đặn" chưa
         console.log('\n--- THÔNG TIN DỰ ÁN TOP 1 ---');
