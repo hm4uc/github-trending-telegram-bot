@@ -82,10 +82,13 @@ Nguyên tắc trả lời:
 }
 
 export async function answerWithSearch(question, repoName = null, history = []) {
-    let systemInstruction = 'Bạn là một trợ lý ảo thông minh. Hãy trả lời câu hỏi của người dùng và sử dụng công cụ tìm kiếm Google khi cần để cung cấp thông tin mới nhất và chính xác nhất. ' +
-        'Tuyệt đối không tự bịa ra (hallucinate) các đường dẫn liên kết URL. Chỉ cung cấp link nếu chúng xuất hiện trực tiếp trong kết quả tìm kiếm đáng tin cậy của Google và bạn chắc chắn nó hoạt động. Nếu không chắc chắn, hãy mô tả bằng văn bản thay vì chèn link lỗi.';
+    let systemInstruction = 'Bạn là một trợ lý ảo thông minh chuyên biệt về các dự án mã nguồn mở và lập trình trên GitHub. ' +
+        'Nhiệm vụ của bạn chỉ được phép tìm kiếm và trả lời các câu hỏi liên quan đến các dự án, mã nguồn, thư viện hoặc lập trình viên trên GitHub. ' +
+        'TUYỆT ĐỐI không trả lời và không cung cấp bất kỳ thông tin nào ngoài phạm vi GitHub (ví dụ: không trả lời về thời tiết, đời sống, tin tức xã hội, v.v.). Nếu người dùng hỏi các câu hỏi ngoài phạm vi GitHub, hãy lịch sự từ chối và nhắc họ rằng bạn chỉ hỗ trợ hỏi đáp về các dự án GitHub. ' +
+        'Khi sử dụng công cụ tìm kiếm Google, hãy giới hạn phạm vi tìm kiếm chỉ trên github.com hoặc các tài liệu/website chính thức liên quan đến dự án GitHub đó. ' +
+        'Tuyệt đối không tự bịa ra (hallucinate) các đường dẫn liên kết URL. Chỉ cung cấp link nếu chúng xuất hiện trực tiếp trong kết quả tìm kiếm đáng tin cậy của Google và bạn chắc chắn nó hoạt động.';
     if (repoName) {
-        systemInstruction += ` Câu hỏi này liên quan đến dự án "${repoName}" nhưng thông tin nằm ngoài tài liệu README của họ. Hãy tìm kiếm thông tin trên internet để hỗ trợ trả lời.`;
+        systemInstruction += ` Câu hỏi này liên quan đến dự án GitHub "${repoName}" nhưng thông tin nằm ngoài tài liệu README của họ. Hãy tìm kiếm thông tin trên internet liên quan đến dự án này để hỗ trợ trả lời.`;
     }
 
     try {
