@@ -111,6 +111,31 @@ export async function answerWithSearch(question, repoName = null, history = []) 
         return result.response.text();
     } catch (error) {
         console.error('❌ Lỗi khi hỏi đáp với Google Search:', error);
+        
+        // Cơ chế dự phòng khi hết hạn mức (quota 429) của Google Search trên gói miễn phí
+        const isQuotaError = error.status === 429 || 
+                             (error.message && error.message.includes('429')) || 
+                             (error.message && error.message.toLowerCase().includes('quota'));
+                             
+        if (isQuotaError) {
+            console.log('🔄 Đang thử lại câu hỏi sử dụng kiến thức có sẵn của AI (không có Google Search)...');
+            try {
+                const modelWithoutSearch = genAI.getGenerativeModel({
+                    model: "gemini-2.5-flash",
+                    systemInstruction: systemInstruction
+                });
+
+                const chat = modelWithoutSearch.startChat({
+                    history: geminiHistory
+                });
+
+                const result = await chat.sendMessage(question);
+                return `⚠️ _(Lưu ý: Hệ thống đạt giới hạn lượt tìm kiếm Google nên câu trả lời được tạo từ kiến thức của AI)_ \n\n` + result.response.text();
+            } catch (retryError) {
+                console.error('❌ Lỗi khi tự động fallback không dùng Search:', retryError);
+            }
+        }
+        
         return 'Xin lỗi, đã xảy ra lỗi khi tìm kiếm thông tin trực tuyến để trả lời câu hỏi của bạn.';
     }
 }
