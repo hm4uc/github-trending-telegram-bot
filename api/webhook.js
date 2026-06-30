@@ -26,16 +26,23 @@ export default async function handler(req, res) {
                         `4️⃣ Khi đã chọn dự án, bạn cứ hỏi thoải mái. Tôi sẽ tự tra cứu README của dự án trước, nếu không có mới tìm kiếm Google.`;
                 }
                 // 2. Lệnh xem trending
-                else if (lowerText === 'trending' || lowerText === '/trending') {
-                    replyText = '⏳ Đang đọc dữ liệu từ database và phân tích, anh đợi xíu nhé...';
+                else if (lowerText.startsWith('trending') || lowerText.startsWith('/trending')) {
+                    // Phân tách để lấy số lượng yêu cầu (mặc định là 5, tối đa 10 để tránh quá tải tin nhắn)
+                    const parts = lowerText.split(/\s+/);
+                    let limit = 5;
+                    if (parts[1] && !isNaN(parts[1])) {
+                        limit = Math.min(Math.max(parseInt(parts[1]), 1), 10);
+                    }
+
+                    replyText = `⏳ Đang đọc dữ liệu top ${limit} từ database và phân tích, anh đợi xíu nhé...`;
                     await sendMessage(chatId, replyText, BOT_TOKEN);
 
-                    // Lấy 5 dự án mới nhất từ Database (không đi cào lại trực tiếp để tránh timeout trên Vercel)
+                    // Lấy các dự án mới nhất từ Database (không đi cào lại trực tiếp để tránh timeout trên Vercel)
                     const { data: reposData } = await supabase
                         .from('repositories')
                         .select('repo_name, link, description, readme, language')
                         .order('scraped_at', { ascending: false })
-                        .limit(5);
+                        .limit(limit);
 
                     if (reposData && reposData.length > 0) {
                         const formattedRepos = reposData.map((repo, i) => ({

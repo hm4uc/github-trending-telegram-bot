@@ -34,8 +34,8 @@ export async function getGithubTrending() {
         const html = await response.text();
         const $ = cheerio.load(html);
 
-        // Lấy top 5 repo chạy song song để tăng tốc độ
-        const rows = $('article.Box-row').slice(0, 5).toArray();
+        // Lấy top 10 repo chạy song song để tăng tốc độ
+        const rows = $('article.Box-row').slice(0, 10).toArray();
         const promises = rows.map(async (element, i) => {
             const titleElement = $(element).find('h2.h3 a');
             const relativeLink = titleElement.attr('href');
