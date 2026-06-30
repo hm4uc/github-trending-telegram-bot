@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { supabase } from './db.js';
 
 const HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -67,6 +68,27 @@ export async function getGithubTrending() {
         if (trendingRepos.length === 0) {
             console.log('⚠️ Không tìm thấy dự án trending nào.');
             return [];
+        }
+
+        // Lưu dữ liệu vào Supabase
+        console.log('💾 Đang lưu dữ liệu vào Supabase...');
+        const upsertData = trendingRepos.map(repo => ({
+            repo_name: repo.name,
+            link: repo.link,
+            description: repo.description,
+            readme: repo.readme,
+            language: repo.language,
+            scraped_at: new Date().toISOString()
+        }));
+
+        const { error } = await supabase
+            .from('repositories')
+            .upsert(upsertData, { onConflict: 'repo_name' });
+
+        if (error) {
+            console.error('❌ Lỗi khi lưu vào Supabase:', error.message);
+        } else {
+            console.log('✅ Đã cập nhật database thành công!');
         }
 
         // In thử dự án Top 1 ra xem dữ liệu đã "đầy đặn" chưa

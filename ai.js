@@ -40,3 +40,70 @@ export async function summarizeWithAI(reposData) {
         console.error('❌ Lỗi khi gọi Gemini API:', error);
     }
 }
+
+export async function answerRepoQuestion(readme, repoName, question, history = []) {
+    const systemInstruction = `
+Bạn là một chatbot hỗ trợ lập trình viên. Nhiệm vụ của bạn là giải đáp thắc mắc về dự án "${repoName}" dựa vào tài liệu README được cung cấp dưới đây.
+
+Nội dung README của dự án:
+=== BẮT ĐẦU README ===
+${readme}
+=== KẾT THÚC README ===
+
+Nguyên tắc trả lời:
+1. CHỈ sử dụng thông tin có trong tài liệu README ở trên để trả lời.
+2. Nếu câu hỏi KHÔNG THỂ trả lời được bằng thông tin trong tài liệu README trên, bạn BẮT BUỘC phải bắt đầu câu trả lời bằng cụm từ "[OUT_OF_SCOPE]" và giải thích ngắn gọn rằng thông tin này không có trong tài liệu README của dự án. Không được tự bịa ra thông tin hoặc dùng kiến thức cũ của bạn để trả lời.
+`;
+
+    try {
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.5-flash",
+            systemInstruction: systemInstruction
+        });
+
+        const geminiHistory = history.map(h => ({
+            role: h.role,
+            parts: [{ text: h.content }]
+        }));
+
+        const chat = model.startChat({
+            history: geminiHistory
+        });
+
+        const result = await chat.sendMessage(question);
+        return result.response.text();
+    } catch (error) {
+        console.error('❌ Lỗi khi hỏi đáp về repo:', error);
+        return 'Xin lỗi, đã xảy ra lỗi trong quá trình xử lý câu hỏi của bạn.';
+    }
+}
+
+export async function answerWithSearch(question, repoName = null, history = []) {
+    let systemInstruction = 'Bạn là một trợ lý ảo thông minh. Hãy trả lời câu hỏi của người dùng và sử dụng công cụ tìm kiếm Google khi cần để cung cấp thông tin mới nhất và chính xác nhất.';
+    if (repoName) {
+        systemInstruction += ` Câu hỏi này liên quan đến dự án "${repoName}" nhưng thông tin nằm ngoài tài liệu README của họ. Hãy tìm kiếm thông tin trên internet để hỗ trợ trả lời.`;
+    }
+
+    try {
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash",
+            systemInstruction: systemInstruction,
+            tools: [{ googleSearch: {} }]
+        });
+
+        const geminiHistory = history.map(h => ({
+            role: h.role,
+            parts: [{ text: h.content }]
+        }));
+
+        const chat = model.startChat({
+            history: geminiHistory
+        });
+
+        const result = await chat.sendMessage(question);
+        return result.response.text();
+    } catch (error) {
+        console.error('❌ Lỗi khi hỏi đáp với Google Search:', error);
+        return 'Xin lỗi, đã xảy ra lỗi khi tìm kiếm thông tin trực tuyến để trả lời câu hỏi của bạn.';
+    }
+}

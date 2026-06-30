@@ -12,6 +12,7 @@
   "type": "module",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.109.0",
     "cheerio": "^1.2.0",
     "dotenv": "^17.4.2"
   }

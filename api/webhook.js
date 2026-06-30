@@ -1,36 +1,152 @@
-import { summarizeWithAI } from '../ai.js';
+import { summarizeWithAI, answerRepoQuestion, answerWithSearch } from '../ai.js';
 import { getGithubTrending } from '../scraper.js';
+import { supabase } from '../db.js';
 
 export default async function handler(req, res) {
-    // Khi bạn chat, Telegram sẽ bắn request POST vào đây
     if (req.method === 'POST') {
         const body = req.body;
 
-        // Kiểm tra xem có tin nhắn không
         if (body.message && body.message.text) {
             const chatId = body.message.chat.id;
-            const text = body.message.text.trim().toLowerCase();
+            const text = body.message.text.trim();
+            const lowerText = text.toLowerCase();
             const BOT_TOKEN = process.env.BOT_TOKEN;
 
-            let replyText = 'Dạ em chưa hiểu ý anh. Anh gõ "trending" để lấy bản tin Github nhé!';
+            let replyText = '';
 
-            // Dạy bot hiểu lệnh "trending"
-            if (text === 'trending') {
-                replyText = '⏳ Đang đi cào dữ liệu và phân tích, anh đợi xíu nhé...';
-                // Bắn tin nhắn phản hồi trước để tránh timeout
-                await sendMessage(chatId, replyText, BOT_TOKEN);
+            try {
+                // 1. Nhóm lệnh START / HELP
+                if (lowerText === '/start' || lowerText === '/help') {
+                    replyText = `🤖 *Chào mừng bạn đến với GitHub Trending AI Bot!*\n\n` +
+                                `Các lệnh bạn có thể sử dụng:\n` +
+                                `1️⃣ Gõ *trending* hoặc */trending* để xem danh sách xu hướng hôm nay.\n` +
+                                `2️⃣ Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` để chọn dự án cần hỏi đáp.\n` +
+                                `   _Ví dụ: /ask commaai/openpilot_\n` +
+                                `3️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trò chuyện chung.\n` +
+                                `4️⃣ Khi đã chọn dự án, bạn cứ hỏi thoải mái. Tôi sẽ tự tra cứu README của dự án trước, nếu không có mới tìm kiếm Google.`;
+                }
+                // 2. Lệnh xem trending
+                else if (lowerText === 'trending' || lowerText === '/trending') {
+                    replyText = '⏳ Đang đi cào dữ liệu và phân tích các dự án trending, anh đợi xíu nhé...';
+                    await sendMessage(chatId, replyText, BOT_TOKEN);
 
-                // Đi lấy dữ liệu
-                const reposData = await getGithubTrending();
-                replyText = await summarizeWithAI(reposData);
+                    const reposData = await getGithubTrending();
+                    replyText = await summarizeWithAI(reposData);
+                }
+                // 3. Lệnh chọn dự án để hỏi đáp
+                else if (lowerText.startsWith('/ask')) {
+                    const parts = text.split(/\s+/);
+                    const repoName = parts[1] ? parts[1].trim() : null;
+
+                    if (!repoName) {
+                        const { data: session } = await supabase
+                            .from('user_sessions')
+                            .select('active_repo')
+                            .eq('chat_id', chatId)
+                            .maybeSingle();
+
+                        if (session && session.active_repo) {
+                            replyText = `🎯 Bạn đang chọn hỏi đáp về dự án: *${session.active_repo}*.\n` +
+                                        `Hãy nhập câu hỏi của bạn. Gõ \`/exit\` để quay về chế độ bình thường.`;
+                        } else {
+                            replyText = `💡 Vui lòng nhập đúng cú pháp để chọn dự án: \`/ask <chủ_sở_hữu>/<tên_repo>\`.\n` +
+                                        `Ví dụ: \`/ask cupy/cupy\``;
+                        }
+                    } else {
+                        // Kiểm tra xem repo có tồn tại trong database chưa
+                        const { data: repo, error } = await supabase
+                            .from('repositories')
+                            .select('repo_name')
+                            .ilike('repo_name', repoName)
+                            .maybeSingle();
+
+                        if (repo) {
+                            // Lưu session của user
+                            await supabase
+                                .from('user_sessions')
+                                .upsert({ chat_id: chatId, active_repo: repo.repo_name, last_active: new Date().toISOString() });
+                            
+                            // Reset lịch sử chat khi đổi dự án để tránh xung đột ngữ cảnh
+                            await supabase.from('chat_history').delete().eq('chat_id', chatId);
+
+                            replyText = `✅ Đã kết nối với dự án *${repo.repo_name}*!\n` +
+                                        `Bây giờ, mọi câu hỏi của bạn sẽ được giải đáp dựa trên dữ liệu README thật của dự án này. Gõ \`/exit\` để thoát.`;
+                        } else {
+                            replyText = `❌ Không tìm thấy dự án *${repoName}* trong database.\n` +
+                                        `Vui lòng gõ chính xác tên repo trên GitHub (ví dụ: \`commaai/openpilot\`) hoặc chạy /trending để cập nhật dữ liệu mới nhất.`;
+                        }
+                    }
+                }
+                // 4. Lệnh thoát hỏi đáp
+                else if (lowerText === '/exit' || lowerText === '/clear') {
+                    await supabase.from('user_sessions').delete().eq('chat_id', chatId);
+                    await supabase.from('chat_history').delete().eq('chat_id', chatId);
+                    replyText = `🚪 Đã thoát khỏi chế độ hỏi đáp dự án. Chuyển về chế độ hỏi đáp tự do với Trợ lý AI.`;
+                }
+                // 5. Hội thoại thông thường
+                else {
+                    // Kiểm tra session hiện tại của người dùng
+                    const { data: session } = await supabase
+                        .from('user_sessions')
+                        .select('active_repo')
+                        .eq('chat_id', chatId)
+                        .maybeSingle();
+
+                    // Lấy lịch sử chat (tối đa 8 câu gần nhất để tiết kiệm token và giữ context)
+                    const { data: history } = await supabase
+                        .from('chat_history')
+                        .select('role, content')
+                        .eq('chat_id', chatId)
+                        .order('created_at', { ascending: true })
+                        .limit(8);
+
+                    if (session && session.active_repo) {
+                        // Lấy dữ liệu README thật từ database
+                        const { data: repo } = await supabase
+                            .from('repositories')
+                            .select('repo_name, readme')
+                            .eq('repo_name', session.active_repo)
+                            .maybeSingle();
+
+                        if (repo) {
+                            let answer = await answerRepoQuestion(repo.readme, repo.repo_name, text, history || []);
+
+                            // Nếu AI xác định câu hỏi nằm ngoài README, tiến hành tìm kiếm Google
+                            if (answer.includes('[OUT_OF_SCOPE]')) {
+                                await sendMessage(chatId, `🔍 Câu hỏi nằm ngoài tài liệu README của dự án *${repo.repo_name}*. Đang tìm kiếm thêm thông tin trên internet...`, BOT_TOKEN);
+                                
+                                const searchAnswer = await answerWithSearch(text, repo.repo_name, history || []);
+                                replyText = `🌐 *[Kết quả tìm kiếm internet về ${repo.repo_name}]*:\n\n${searchAnswer}`;
+                            } else {
+                                replyText = answer;
+                            }
+                        } else {
+                            replyText = `⚠️ Không tìm thấy dữ liệu của dự án *${session.active_repo}*. Bạn vui lòng chọn dự án khác hoặc cập nhật lại.`;
+                        }
+                    } else {
+                        // Hỏi đáp tự do ngoài dự án
+                        const searchAnswer = await answerWithSearch(text, null, history || []);
+                        replyText = `🌐 *[Trợ lý AI]*:\n\n${searchAnswer}`;
+                    }
+
+                    // Lưu lịch sử chat
+                    await supabase.from('chat_history').insert([
+                        { chat_id: chatId, role: 'user', content: text },
+                        { chat_id: chatId, role: 'model', content: replyText }
+                    ]);
+                }
+            } catch (err) {
+                console.error('❌ Lỗi xử lý tin nhắn:', err);
+                replyText = `❌ Đã xảy ra lỗi hệ thống: ${err.message}. Vui lòng thử lại sau!`;
             }
 
-            // Gửi tin nhắn kết quả lại cho bạn
-            await sendMessage(chatId, replyText, BOT_TOKEN);
+            // Gửi kết quả cuối cùng cho người dùng
+            if (replyText) {
+                await sendMessage(chatId, replyText, BOT_TOKEN);
+            }
         }
     }
 
-    // Luôn phải trả về 200 OK để Telegram biết là đã nhận được tin
     res.status(200).json({ ok: true });
 }
 
