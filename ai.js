@@ -12,18 +12,21 @@ export async function summarizeWithAI(reposData) {
 
     // 2. Kỹ năng Prompt Engineering: Ra lệnh cho AI
     const prompt = `
-    Bạn là một Senior Developer đi trước. Tôi có danh sách các dự án GitHub đang trending hôm nay.
-    Dưới đây là dữ liệu JSON (chứa tên, ngôn ngữ, mô tả và trích đoạn README của chúng):
+    Đóng vai một Senior Tech Lead đang tóm tắt xu hướng mã nguồn mở cho team.
+    Dưới đây là mảng JSON chứa các dự án GitHub Trending hôm nay (có kèm trích đoạn README):
     
     ${JSON.stringify(reposData)}
     
-    Hãy viết một bản báo cáo ngắn gọn, sắc bén bằng tiếng Việt để tôi gửi qua Telegram.
-    Nguyên tắc bắt buộc:
-    - Giải thích bản chất dự án làm được gì, mang lại lợi ích gì (dựa vào phần README). Không dịch word-by-word một cách máy móc.
-    - Dùng icon sinh động để dễ đọc trên điện thoại.
-    - Mỗi dự án trình bày theo format:
-      🔥 [Tên dự án](Link) - Ngôn ngữ
-      💡 Tính năng cốt lõi: (2-3 câu tóm tắt cực chất)
+    Nhiệm vụ: Viết một bản tin thật sắc bén bằng tiếng Việt để gửi thẳng qua Telegram.
+    
+    YÊU CẦU KHẮT KHE:
+    1. Đi thẳng vào vấn đề: KHÔNG mở bài chào hỏi (kiểu "Chào bạn, dưới đây là..."), KHÔNG kết thúc vòng vo. Chỉ xuất ra nội dung bản tin.
+    2. Chất lượng nội dung: Đọc hiểu README để rút ra BẢN CHẤT. Dự án này sinh ra để làm gì? Lợi ích là gì? (Dùng từ ngữ dân dã của lập trình viên, tuyệt đối không dịch máy móc word-by-word).
+    3. An toàn Telegram API: HẠN CHẾ TỐI ĐA việc tự ý dùng các ký tự Markdown (như **, __, #, \`) bên ngoài format quy định để tránh lỗi parse text của bot Telegram.
+    4. Trình bày mỗi dự án tuân thủ CHÍNH XÁC cấu trúc sau (giữa các dự án cách nhau một dòng trống):
+    
+    🔥 [Tên dự án](Link) | 💻 Ngôn ngữ
+    💡 Insight: (2-4 câu giải thích ngắn gọn, đi thẳng vào "nỗi đau" mà dự án giải quyết).
     `;
 
     try {
@@ -56,7 +59,7 @@ Nguyên tắc trả lời:
 `;
 
     try {
-        const model = genAI.getGenerativeModel({ 
+        const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             systemInstruction: systemInstruction
         });
