@@ -18,12 +18,12 @@ export default async function handler(req, res) {
                 // 1. Nhóm lệnh START / HELP
                 if (lowerText === '/start' || lowerText === '/help') {
                     replyText = `🤖 *Chào mừng bạn đến với GitHub Trending AI Bot!*\n\n` +
-                                `Các lệnh bạn có thể sử dụng:\n` +
-                                `1️⃣ Gõ *trending* hoặc */trending* để xem danh sách xu hướng hôm nay.\n` +
-                                `2️⃣ Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` để chọn dự án cần hỏi đáp.\n` +
-                                `   _Ví dụ: /ask commaai/openpilot_\n` +
-                                `3️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trò chuyện chung.\n` +
-                                `4️⃣ Khi đã chọn dự án, bạn cứ hỏi thoải mái. Tôi sẽ tự tra cứu README của dự án trước, nếu không có mới tìm kiếm Google.`;
+                        `Các lệnh bạn có thể sử dụng:\n` +
+                        `1️⃣ Gõ *trending* hoặc */trending* để xem danh sách xu hướng hôm nay.\n` +
+                        `2️⃣ Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` để chọn dự án cần hỏi đáp.\n` +
+                        `   _Ví dụ: /ask commaai/openpilot_\n` +
+                        `3️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trò chuyện chung.\n` +
+                        `4️⃣ Khi đã chọn dự án, bạn cứ hỏi thoải mái. Tôi sẽ tự tra cứu README của dự án trước, nếu không có mới tìm kiếm Google.`;
                 }
                 // 2. Lệnh xem trending
                 else if (lowerText === 'trending' || lowerText === '/trending') {
@@ -47,10 +47,10 @@ export default async function handler(req, res) {
 
                         if (session && session.active_repo) {
                             replyText = `🎯 Bạn đang chọn hỏi đáp về dự án: *${session.active_repo}*.\n` +
-                                        `Hãy nhập câu hỏi của bạn. Gõ \`/exit\` để quay về chế độ bình thường.`;
+                                `Hãy nhập câu hỏi của bạn. Gõ \`/exit\` để quay về chế độ bình thường.`;
                         } else {
                             replyText = `💡 Vui lòng nhập đúng cú pháp để chọn dự án: \`/ask <chủ_sở_hữu>/<tên_repo>\`.\n` +
-                                        `Ví dụ: \`/ask cupy/cupy\``;
+                                `Ví dụ: \`/ask cupy/cupy\``;
                         }
                     } else {
                         // Kiểm tra xem repo có tồn tại trong database chưa
@@ -65,15 +65,15 @@ export default async function handler(req, res) {
                             await supabase
                                 .from('user_sessions')
                                 .upsert({ chat_id: chatId, active_repo: repo.repo_name, last_active: new Date().toISOString() });
-                            
+
                             // Reset lịch sử chat khi đổi dự án để tránh xung đột ngữ cảnh
                             await supabase.from('chat_history').delete().eq('chat_id', chatId);
 
                             replyText = `✅ Đã kết nối với dự án *${repo.repo_name}*!\n` +
-                                        `Bây giờ, mọi câu hỏi của bạn sẽ được giải đáp dựa trên dữ liệu README thật của dự án này. Gõ \`/exit\` để thoát.`;
+                                `Bây giờ, mọi câu hỏi của bạn sẽ được giải đáp dựa trên dữ liệu README thật của dự án này. Gõ \`/exit\` để thoát.`;
                         } else {
                             replyText = `❌ Không tìm thấy dự án *${repoName}* trong database.\n` +
-                                        `Vui lòng gõ chính xác tên repo trên GitHub (ví dụ: \`commaai/openpilot\`) hoặc chạy /trending để cập nhật dữ liệu mới nhất.`;
+                                `Vui lòng gõ chính xác tên repo trên GitHub (ví dụ: \`commaai/openpilot\`) hoặc chạy /trending để cập nhật dữ liệu mới nhất.`;
                         }
                     }
                 }
@@ -114,9 +114,9 @@ export default async function handler(req, res) {
                                     await supabase
                                         .from('user_sessions')
                                         .upsert({ chat_id: chatId, active_repo: matchedRepoName, last_active: new Date().toISOString() });
-                                    
+
                                     await sendMessage(chatId, `🎯 _Tự động kết nối hỏi đáp về dự án *${matchedRepoName}* dựa trên câu hỏi của bạn._`, BOT_TOKEN);
-                                    
+
                                     session = { active_repo: matchedRepoName };
                                     // Xóa lịch sử cũ khi tự động chuyển dự án để tránh loạn ngữ cảnh
                                     await supabase.from('chat_history').delete().eq('chat_id', chatId);
@@ -147,7 +147,7 @@ export default async function handler(req, res) {
                             // Nếu AI xác định câu hỏi nằm ngoài README, tiến hành tìm kiếm Google
                             if (answer.includes('[OUT_OF_SCOPE]')) {
                                 await sendMessage(chatId, `🔍 Câu hỏi nằm ngoài tài liệu README của dự án *${repo.repo_name}*. Đang tìm kiếm thêm thông tin trên internet...`, BOT_TOKEN);
-                                
+
                                 const searchAnswer = await answerWithSearch(text, repo.repo_name, history || []);
                                 replyText = `🌐 *[Kết quả tìm kiếm internet về ${repo.repo_name}]*:\n\n${searchAnswer}`;
                             } else {
@@ -190,11 +190,11 @@ async function sendMessage(chatId, text, token) {
         let response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                chat_id: chatId, 
-                text: text, 
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: text,
                 parse_mode: 'Markdown',
-                disable_web_page_preview: true 
+                disable_web_page_preview: true
             })
         });
 
@@ -203,10 +203,10 @@ async function sendMessage(chatId, text, token) {
             await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    chat_id: chatId, 
+                body: JSON.stringify({
+                    chat_id: chatId,
                     text: text,
-                    disable_web_page_preview: true 
+                    disable_web_page_preview: true
                 })
             });
         }
@@ -221,25 +221,9 @@ function quickMatchRepo(text, repos) {
     for (const repo of repos) {
         const repoName = repo.repo_name.toLowerCase();
         const parts = repoName.split('/');
-        const owner = parts[0];
         const name = parts[1];
-
         // Match tên đầy đủ hoặc tên phần đuôi của repo (ví dụ: "openpilot", "maigret")
         if (lowerText.includes(name) || lowerText.includes(name.replace(/-/g, '')) || lowerText.includes(name.replace(/_/g, ''))) {
-            return repo.repo_name;
-        }
-
-        // Match một số từ khóa tiếng Việt hoặc cụm từ phổ biến đặc trưng cho từng repo
-        if (name === 'simplex-chat' && (lowerText.includes('simple chat') || lowerText.includes('simplex') || lowerText.includes('simplex chat'))) {
-            return repo.repo_name;
-        }
-        if (name === 'openpilot' && (lowerText.includes('lái xe') || lowerText.includes('hỗ trợ lái') || lowerText.includes('tự lái'))) {
-            return repo.repo_name;
-        }
-        if (name === 'maigret' && (lowerText.includes('truy vết') || lowerText.includes('thám tử') || lowerText.includes('osint'))) {
-            return repo.repo_name;
-        }
-        if (name === 'agency-agents' && (lowerText.includes('agent') || lowerText.includes('agency'))) {
             return repo.repo_name;
         }
     }
