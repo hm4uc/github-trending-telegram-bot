@@ -99,7 +99,14 @@ export default async function handler(req, res) {
                             .select('repo_name, description');
 
                         if (repos && repos.length > 0) {
-                            const matchedRepoName = await identifyReferencedRepo(text, repos);
+                            // 1. Thử match nhanh bằng từ khóa cục bộ để tiết kiệm API Quota
+                            let matchedRepoName = quickMatchRepo(text, repos);
+
+                            // 2. Nếu không match cục bộ, mới dùng Gemini AI để nhận diện
+                            if (!matchedRepoName) {
+                                matchedRepoName = await identifyReferencedRepo(text, repos);
+                            }
+
                             if (matchedRepoName) {
                                 const exists = repos.some(r => r.repo_name === matchedRepoName);
                                 if (exists) {
@@ -206,4 +213,35 @@ async function sendMessage(chatId, text, token) {
     } catch (error) {
         console.error('❌ Lỗi kết nối Telegram:', error);
     }
+}
+
+// Hàm so khớp nhanh tên dự án bằng từ khóa cục bộ (0ms, tiết kiệm API Quota)
+function quickMatchRepo(text, repos) {
+    const lowerText = text.toLowerCase();
+    for (const repo of repos) {
+        const repoName = repo.repo_name.toLowerCase();
+        const parts = repoName.split('/');
+        const owner = parts[0];
+        const name = parts[1];
+
+        // Match tên đầy đủ hoặc tên phần đuôi của repo (ví dụ: "openpilot", "maigret")
+        if (lowerText.includes(name) || lowerText.includes(name.replace(/-/g, '')) || lowerText.includes(name.replace(/_/g, ''))) {
+            return repo.repo_name;
+        }
+
+        // Match một số từ khóa tiếng Việt hoặc cụm từ phổ biến đặc trưng cho từng repo
+        if (name === 'simplex-chat' && (lowerText.includes('simple chat') || lowerText.includes('simplex') || lowerText.includes('simplex chat'))) {
+            return repo.repo_name;
+        }
+        if (name === 'openpilot' && (lowerText.includes('lái xe') || lowerText.includes('hỗ trợ lái') || lowerText.includes('tự lái'))) {
+            return repo.repo_name;
+        }
+        if (name === 'maigret' && (lowerText.includes('truy vết') || lowerText.includes('thám tử') || lowerText.includes('osint'))) {
+            return repo.repo_name;
+        }
+        if (name === 'agency-agents' && (lowerText.includes('agent') || lowerText.includes('agency'))) {
+            return repo.repo_name;
+        }
+    }
+    return null;
 }

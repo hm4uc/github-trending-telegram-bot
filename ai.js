@@ -91,17 +91,17 @@ export async function answerWithSearch(question, repoName = null, history = []) 
         systemInstruction += ` Câu hỏi này liên quan đến dự án GitHub "${repoName}" nhưng thông tin nằm ngoài tài liệu README của họ. Hãy tìm kiếm thông tin trên internet liên quan đến dự án này để hỗ trợ trả lời.`;
     }
 
+    const geminiHistory = history.map(h => ({
+        role: h.role,
+        parts: [{ text: h.content }]
+    }));
+
     try {
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
             systemInstruction: systemInstruction,
             tools: [{ googleSearch: {} }]
         });
-
-        const geminiHistory = history.map(h => ({
-            role: h.role,
-            parts: [{ text: h.content }]
-        }));
 
         const chat = model.startChat({
             history: geminiHistory
