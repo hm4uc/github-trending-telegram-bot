@@ -27,11 +27,29 @@ export default async function handler(req, res) {
                 }
                 // 2. Lệnh xem trending
                 else if (lowerText === 'trending' || lowerText === '/trending') {
-                    replyText = '⏳ Đang đi cào dữ liệu và phân tích các dự án trending, anh đợi xíu nhé...';
+                    replyText = '⏳ Đang đọc dữ liệu từ database và phân tích, anh đợi xíu nhé...';
                     await sendMessage(chatId, replyText, BOT_TOKEN);
 
-                    const reposData = await getGithubTrending();
-                    replyText = await summarizeWithAI(reposData);
+                    // Lấy 5 dự án mới nhất từ Database (không đi cào lại trực tiếp để tránh timeout trên Vercel)
+                    const { data: reposData } = await supabase
+                        .from('repositories')
+                        .select('repo_name, link, description, readme, language')
+                        .order('scraped_at', { ascending: false })
+                        .limit(5);
+
+                    if (reposData && reposData.length > 0) {
+                        const formattedRepos = reposData.map((repo, i) => ({
+                            top: i + 1,
+                            name: repo.repo_name,
+                            link: repo.link,
+                            description: repo.description,
+                            readme: repo.readme,
+                            language: repo.language
+                        }));
+                        replyText = await summarizeWithAI(formattedRepos);
+                    } else {
+                        replyText = '⚠️ Hiện tại database đang trống. Hãy đợi Vercel Cron chạy cào dữ liệu hoặc chạy cục bộ bằng `main.js` để cập nhật dữ liệu.';
+                    }
                 }
                 // 3. Lệnh chọn dự án để hỏi đáp
                 else if (lowerText.startsWith('/ask')) {
