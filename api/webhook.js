@@ -19,9 +19,10 @@ export default async function handler(req, res) {
                 if (lowerText === '/start' || lowerText === '/help') {
                     replyText = `🤖 *Chào mừng bạn đến với GitHub Trending AI Bot!*\n\n` +
                         `Các lệnh bạn có thể sử dụng:\n` +
-                        `1️⃣ Gõ *trending* hoặc */trending* để xem danh sách xu hướng hôm nay.\n` +
-                        `2️⃣ Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` để chọn dự án cần hỏi đáp.\n` +
-                        `   _Ví dụ: /ask commaai/openpilot_\n` +
+                        `1️⃣ Gõ *trending [số_lượng]* hoặc */trending [số_lượng]* để xem xu hướng hôm nay (Mặc định là 5, tối đa là 10).\n` +
+                        `   _Ví dụ: /trending 10_\n` +
+                        `2️⃣ Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` hoặc đặt câu hỏi tự nhiên chứa tên dự án để kết nối hỏi đáp.\n` +
+                        `   _Ví dụ: /ask commaai/openpilot hoặc "dự án openpilot làm được gì?"_\n` +
                         `3️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trò chuyện chung.\n` +
                         `4️⃣ Khi đã chọn dự án, bạn cứ hỏi thoải mái. Tôi sẽ tự tra cứu README của dự án trước, nếu không có mới tìm kiếm Google.`;
                 }
