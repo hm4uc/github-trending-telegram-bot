@@ -107,3 +107,28 @@ export async function answerWithSearch(question, repoName = null, history = []) 
         return 'Xin lỗi, đã xảy ra lỗi khi tìm kiếm thông tin trực tuyến để trả lời câu hỏi của bạn.';
     }
 }
+
+export async function identifyReferencedRepo(question, repoList) {
+    const prompt = `
+Dưới đây là danh sách các dự án GitHub đang có trong hệ thống (chứa tên và mô tả ngắn):
+${JSON.stringify(repoList)}
+
+Câu hỏi/tin nhắn của người dùng: "${question}"
+
+Hãy phân tích xem tin nhắn của người dùng có đang hỏi, nhắc đến hoặc muốn tìm hiểu về một dự án cụ thể nào trong danh sách trên hay không (chấp nhận việc viết sai chính tả, viết tắt, dịch nghĩa, hoặc nhắc đến tên một phần của dự án, ví dụ: "simple chat" tương ứng với "simplex-chat/simplex-chat").
+
+Quy tắc phản hồi:
+- Nếu xác định người dùng đang nhắc đến một dự án cụ thể, hãy trả về CHÍNH XÁC "repo_name" của dự án đó (không thêm bất kỳ từ ngữ nào khác). Ví dụ: "simplex-chat/simplex-chat".
+- Nếu người dùng KHÔNG nhắc đến dự án nào, hoặc câu hỏi là chung chung, hãy trả về từ "NONE".
+`;
+
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const result = await model.generateContent(prompt);
+        const matched = result.response.text().replace(/[`"']/g, '').trim();
+        return matched !== 'NONE' ? matched : null;
+    } catch (error) {
+        console.error('❌ Lỗi khi phân tích dự án được nhắc đến:', error);
+        return null;
+    }
+}

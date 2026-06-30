@@ -1,4 +1,4 @@
-import { summarizeWithAI, answerRepoQuestion, answerWithSearch } from '../ai.js';
+import { summarizeWithAI, answerRepoQuestion, answerWithSearch, identifyReferencedRepo } from '../ai.js';
 import { getGithubTrending } from '../scraper.js';
 import { supabase } from '../db.js';
 
@@ -86,11 +86,37 @@ export default async function handler(req, res) {
                 // 5. Hội thoại thông thường
                 else {
                     // Kiểm tra session hiện tại của người dùng
-                    const { data: session } = await supabase
+                    let { data: session } = await supabase
                         .from('user_sessions')
                         .select('active_repo')
                         .eq('chat_id', chatId)
                         .maybeSingle();
+
+                    // Nếu chưa chọn repo, thử phân tích ngôn ngữ tự nhiên để nhận diện repo được nhắc tới
+                    if (!session || !session.active_repo) {
+                        const { data: repos } = await supabase
+                            .from('repositories')
+                            .select('repo_name, description');
+
+                        if (repos && repos.length > 0) {
+                            const matchedRepoName = await identifyReferencedRepo(text, repos);
+                            if (matchedRepoName) {
+                                const exists = repos.some(r => r.repo_name === matchedRepoName);
+                                if (exists) {
+                                    // Tự động kích hoạt session
+                                    await supabase
+                                        .from('user_sessions')
+                                        .upsert({ chat_id: chatId, active_repo: matchedRepoName, last_active: new Date().toISOString() });
+                                    
+                                    await sendMessage(chatId, `🎯 _Tự động kết nối hỏi đáp về dự án *${matchedRepoName}* dựa trên câu hỏi của bạn._`, BOT_TOKEN);
+                                    
+                                    session = { active_repo: matchedRepoName };
+                                    // Xóa lịch sử cũ khi tự động chuyển dự án để tránh loạn ngữ cảnh
+                                    await supabase.from('chat_history').delete().eq('chat_id', chatId);
+                                }
+                            }
+                        }
+                    }
 
                     // Lấy lịch sử chat (tối đa 8 câu gần nhất để tiết kiệm token và giữ context)
                     const { data: history } = await supabase

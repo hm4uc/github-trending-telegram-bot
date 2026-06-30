@@ -20,7 +20,6 @@ A serverless Telegram Bot that tracks top trending repositories on GitHub, summa
 ├── main.js                 # Main orchestrator script to run the bot and update cache locally
 ├── scraper.js              # Scrapes the trending list and updates Supabase cache
 ├── setup.sql               # Database schema setup queries
-├── test_webhook_chat.js    # Simulation test suite for Telegram webhook Q&A logic
 ├── vercel.json             # Vercel cron and configuration file
 ├── package.json            # Node.js dependencies
 └── .gitignore              # Ignores local environment files and node_modules
@@ -78,10 +77,6 @@ To run the scraper and update your database cache manually:
 node main.js
 ```
 
-To test the end-to-end webhook ask/answer flow (commands, README lookup, chat history, and Google Search fallback) locally:
-```bash
-node test_webhook_chat.js
-```
 
 ### Deploying to Vercel
 
