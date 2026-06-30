@@ -82,7 +82,8 @@ Nguyên tắc trả lời:
 }
 
 export async function answerWithSearch(question, repoName = null, history = []) {
-    let systemInstruction = 'Bạn là một trợ lý ảo thông minh. Hãy trả lời câu hỏi của người dùng và sử dụng công cụ tìm kiếm Google khi cần để cung cấp thông tin mới nhất và chính xác nhất.';
+    let systemInstruction = 'Bạn là một trợ lý ảo thông minh. Hãy trả lời câu hỏi của người dùng và sử dụng công cụ tìm kiếm Google khi cần để cung cấp thông tin mới nhất và chính xác nhất. ' +
+        'Tuyệt đối không tự bịa ra (hallucinate) các đường dẫn liên kết URL. Chỉ cung cấp link nếu chúng xuất hiện trực tiếp trong kết quả tìm kiếm đáng tin cậy của Google và bạn chắc chắn nó hoạt động. Nếu không chắc chắn, hãy mô tả bằng văn bản thay vì chèn link lỗi.';
     if (repoName) {
         systemInstruction += ` Câu hỏi này liên quan đến dự án "${repoName}" nhưng thông tin nằm ngoài tài liệu README của họ. Hãy tìm kiếm thông tin trên internet để hỗ trợ trả lời.`;
     }
