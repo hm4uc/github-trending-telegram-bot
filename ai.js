@@ -41,6 +41,7 @@ export async function summarizeWithAI(reposData) {
         return text;
     } catch (error) {
         console.error('❌ Lỗi khi gọi Gemini API:', error);
+        throw error;
     }
 }
 
@@ -77,7 +78,7 @@ Nguyên tắc trả lời:
         return result.response.text();
     } catch (error) {
         console.error('❌ Lỗi khi hỏi đáp về repo:', error);
-        return 'Xin lỗi, đã xảy ra lỗi trong quá trình xử lý câu hỏi của bạn.';
+        return `❌ Lỗi xử lý câu hỏi dự án: ${error.message || error}`;
     }
 }
 
@@ -133,10 +134,11 @@ export async function answerWithSearch(question, repoName = null, history = []) 
                 return `⚠️ _(Lưu ý: Hệ thống đạt giới hạn lượt tìm kiếm Google nên câu trả lời được tạo từ kiến thức của AI)_ \n\n` + result.response.text();
             } catch (retryError) {
                 console.error('❌ Lỗi khi tự động fallback không dùng Search:', retryError);
+                return `❌ Lỗi giới hạn tìm kiếm và lỗi dự phòng: ${retryError.message || retryError}`;
             }
         }
         
-        return 'Xin lỗi, đã xảy ra lỗi khi tìm kiếm thông tin trực tuyến để trả lời câu hỏi của bạn.';
+        return `❌ Lỗi khi tìm kiếm trực tuyến: ${error.message || error}`;
     }
 }
 
