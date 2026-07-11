@@ -103,3 +103,56 @@ export async function getGithubTrending() {
         console.error('❌ Lỗi khi lấy dữ liệu:', error);
     }
 }
+
+// Cào thông tin chi tiết của một repo GitHub lẻ từ URL
+export async function scrapeGithubRepo(repoUrl) {
+    try {
+        const response = await fetch(repoUrl, { headers: HEADERS });
+        if (!response.ok) {
+            throw new Error(`Không thể truy cập repo: ${response.statusText}`);
+        }
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        // 1. Phân tích tên repo từ URL
+        const urlObj = new URL(repoUrl);
+        const paths = urlObj.pathname.split('/').filter(p => p);
+        if (paths.length < 2) {
+            throw new Error('Đường dẫn link GitHub không đúng định dạng repo (thiếu owner hoặc name).');
+        }
+        const repoName = `${paths[0]}/${paths[1]}`;
+
+        // 2. Lấy description từ meta tags hoặc từ sidebar
+        let description = $('p.f4.my-3').text().trim();
+        if (!description) {
+            description = $('meta[name="description"]').attr('content') || 
+                          $('meta[property="og:description"]').attr('content') || 
+                          '';
+        }
+        if (description.includes('Contribute to')) {
+            description = ''; // Loại bỏ mô tả mặc định của Github
+        }
+
+        // 3. Lấy programming language
+        const language = $('span.color-fg-default.text-bold.mr-1').first().text().trim() || 
+                         $('.BorderGrid-cell a span.color-fg-default').first().text().trim() || 
+                         'TypeScript';
+
+        // 4. Lấy README
+        let readme = $('article.markdown-body').text().trim();
+        if (!readme) {
+            readme = 'Không có thông tin README hoặc không thể đọc được nội dung.';
+        }
+
+        return {
+            repo_name: repoName,
+            link: `https://github.com/${repoName}`,
+            description: description || 'Không có mô tả.',
+            language: language,
+            readme: readme
+        };
+    } catch (error) {
+        console.error(`❌ Lỗi khi cào dữ liệu repo lẻ:`, error);
+        throw error;
+    }
+}

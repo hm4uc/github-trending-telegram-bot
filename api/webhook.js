@@ -1,5 +1,5 @@
 import { summarizeWithAI, answerRepoQuestion, answerWithSearch, identifyReferencedRepo } from '../ai.js';
-import { getGithubTrending } from '../scraper.js';
+import { getGithubTrending, scrapeGithubRepo } from '../scraper.js';
 import { supabase } from '../db.js';
 
 export default async function handler(req, res) {
@@ -15,6 +15,16 @@ export default async function handler(req, res) {
             let replyText = '';
 
             try {
+                // Phát hiện xem tin nhắn có chứa link GitHub repository hay không
+                const githubRegex = /https?:\/\/(www\.)?github\.com\/([a-zA-Z0-9-._]+)\/([a-zA-Z0-9-._]+)/i;
+                const githubMatch = text.match(githubRegex);
+                const reservedKeywords = new Set([
+                    'trending', 'features', 'pricing', 'join', 'login', 'signup', 'explore', 
+                    'topics', 'marketplace', 'notifications', 'settings', 'messages', 'issues', 
+                    'pulls', 'sponsors', 'about', 'contact', 'careers', 'security', 'orgs', 
+                    'search', 'collections', 'events', 'site'
+                ]);
+
                 // 1. Nhóm lệnh START / HELP
                 if (lowerText === '/start' || lowerText === '/help') {
                     replyText = `🤖 *Chào mừng bạn đến với GitHub Trending AI Bot!*\n\n` +
@@ -23,8 +33,68 @@ export default async function handler(req, res) {
                         `   _Ví dụ: /trending 10_\n` +
                         `2️⃣ Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` hoặc đặt câu hỏi tự nhiên chứa tên dự án để kết nối hỏi đáp.\n` +
                         `   _Ví dụ: /ask commaai/openpilot hoặc "dự án openpilot làm được gì?"_\n` +
-                        `3️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trò chuyện chung.\n` +
-                        `4️⃣ Khi đã chọn dự án, bạn cứ hỏi thoải mái. Tôi sẽ tự tra cứu README của dự án trước, nếu không có mới tìm kiếm Google.`;
+                        `3️⃣ Gửi thẳng một đường **link GitHub Repository** để hệ thống cào dữ liệu, lưu vào database, tóm tắt và tự động kết nối hỏi đáp.\n` +
+                        `   _Ví dụ: https://github.com/simplex-chat/simplex-chat_\n` +
+                        `4️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trò chuyện chung.\n` +
+                        `5️⃣ Khi đã chọn dự án, bạn cứ hỏi thoải mái. Tôi sẽ tự tra cứu README của dự án trước, nếu không có mới tìm kiếm Google.`;
+                }
+                // 1.5 Tự động phát hiện link GitHub repo
+                else if (githubMatch && !reservedKeywords.has(githubMatch[2].toLowerCase())) {
+                    const owner = githubMatch[2];
+                    const repoPart = githubMatch[3];
+                    const cleanRepo = repoPart.split('/')[0].split('#')[0].split('?')[0];
+                    const fullRepoName = `${owner}/${cleanRepo}`;
+                    const repoUrl = `https://github.com/${fullRepoName}`;
+
+                    replyText = `📥 Phát hiện link GitHub repo: *${fullRepoName}*.\nĐang tiến hành cào dữ liệu và phân tích dự án, vui lòng chờ trong giây lát...`;
+                    await sendMessage(chatId, replyText, BOT_TOKEN);
+
+                    try {
+                        // Cào dữ liệu từ GitHub
+                        const repoData = await scrapeGithubRepo(repoUrl);
+
+                        // Lưu hoặc cập nhật vào Supabase
+                        const { error: dbError } = await supabase
+                            .from('repositories')
+                            .upsert({
+                                repo_name: repoData.repo_name,
+                                link: repoData.link,
+                                description: repoData.description,
+                                readme: repoData.readme,
+                                language: repoData.language,
+                                scraped_at: new Date().toISOString()
+                            });
+
+                        if (dbError) {
+                            console.error('❌ Lỗi lưu DB:', dbError);
+                        }
+
+                        // Tự động thiết lập session hỏi đáp cho user sang repo này
+                        await supabase
+                            .from('user_sessions')
+                            .upsert({ chat_id: chatId, active_repo: repoData.repo_name, last_active: new Date().toISOString() });
+
+                        // Reset lịch sử chat cũ
+                        await supabase.from('chat_history').delete().eq('chat_id', chatId);
+
+                        // Gọi AI tóm tắt dự án mới cào về
+                        const summary = await summarizeWithAI([{
+                            top: 1,
+                            name: repoData.repo_name,
+                            link: repoData.link,
+                            description: repoData.description,
+                            readme: repoData.readme,
+                            language: repoData.language
+                        }]);
+
+                        replyText = `✅ Đã cào và lưu thành công dự án *${repoData.repo_name}* vào hệ thống!\n\n` +
+                                    `🎯 _Hệ thống đã tự động chuyển sang chế độ hỏi đáp cho dự án này. Bạn có thể hỏi bất kỳ câu hỏi nào liên quan đến dự án này ngay bây giờ._\n\n` +
+                                    `${summary}`;
+
+                    } catch (scrapeErr) {
+                        console.error('❌ Lỗi khi cào dữ liệu repo lẻ:', scrapeErr);
+                        replyText = `❌ Không thể cào dữ liệu dự án từ link này: ${scrapeErr.message}`;
+                    }
                 }
                 // 2. Lệnh xem trending
                 else if (lowerText.startsWith('trending') || lowerText.startsWith('/trending')) {
