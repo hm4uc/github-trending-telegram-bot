@@ -13,12 +13,13 @@ CREATE TABLE IF NOT EXISTS repositories (
 CREATE TABLE IF NOT EXISTS user_sessions (
     chat_id BIGINT PRIMARY KEY,
     active_repo VARCHAR(255),
-    selected_model VARCHAR(100) DEFAULT 'gemini-2.5-flash-lite',
+    selected_model VARCHAR(100) DEFAULT 'gemini-2.5-flash',
     last_active TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Migration nếu bảng user_sessions đã tồn tại từ trước:
-ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS selected_model VARCHAR(100) DEFAULT 'gemini-2.5-flash-lite';
+ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS selected_model VARCHAR(100) DEFAULT 'gemini-2.5-flash';
+
 
 
 -- 3. Table for storing user chat history (for conversational context)

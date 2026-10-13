@@ -26,11 +26,18 @@ export default async function handler(req, res) {
             const from = message.from || {};
             const username = from.username || '';
             const firstName = from.first_name || '';
-            const text = message.text.trim();
+
+            // Chuẩn hóa: Nếu người dùng lỡ gõ dấu \ (ví dụ \model, \start) thì tự đổi thành /
+            let rawText = message.text.trim();
+            if (rawText.startsWith('\\')) {
+                rawText = '/' + rawText.slice(1);
+            }
+            const text = rawText;
             const lowerText = text.toLowerCase();
 
             let replyText = '';
             let replyMarkup = null;
+
 
             try {
                 // Hiển thị trạng thái "đang gõ tin nhắn" cho người dùng ngay lập tức
@@ -133,7 +140,7 @@ export default async function handler(req, res) {
                         .eq('chat_id', chatId)
                         .maybeSingle();
 
-                    const currentModel = (session && session.selected_model) || 'gemini-2.5-flash-lite';
+                    const currentModel = (session && session.selected_model) || 'gemini-2.5-flash';
                     const activeRepo = session && session.active_repo;
 
                     replyText = `📊 *TRẠNG THÁI TÀI KHOẢN CỦA BẠN:*\n\n` +
@@ -160,32 +167,31 @@ export default async function handler(req, res) {
                         .eq('chat_id', chatId)
                         .maybeSingle();
 
-                    const currentModel = (session && session.selected_model) || 'gemini-2.5-flash-lite';
+                    const currentModel = (session && session.selected_model) || 'gemini-2.5-flash';
 
                     replyText = `⚙️ *CÀI ĐẶT MODEL AI*\n\n` +
                         `🤖 *Model bạn đang sử dụng:* \`${currentModel}\`\n\n` +
-                        `*Chọn 1 trong 2 model tối ưu nhất dưới đây:*\n\n` +
-                        `1️⃣ *Gemini 2.5 Flash-Lite* (Khuyên dùng):\n` +
-                        `   • Tốc độ sinh text siêu tốc, nhẹ, ít nghẽn.\n` +
-                        `   • Hạn mức lượt gọi cao, hiếm khi bị 429.\n` +
-                        `   • Tặng kèm 500-1500 lượt tìm kiếm Google/ngày.\n\n` +
-                        `2️⃣ *Gemini 2.5 Flash*:\n` +
-                        `   • Tư duy lập trình sâu hơn, trả lời chi tiết hơn.\n` +
-                        `   • Tặng kèm 500-1500 lượt tìm kiếm Google/ngày.\n\n` +
+                        `*Chọn 1 trong 2 model hoạt động tốt nhất dưới đây:*\n\n` +
+                        `1️⃣ *Gemini 2.5 Flash* (Mặc định):\n` +
+                        `   • Tốc độ siêu nhanh, ổn định cao.\n` +
+                        `   • Hỗ trợ Google Search miễn phí hàng ngày.\n\n` +
+                        `2️⃣ *Gemini 3.8 Flash* (Thế hệ mới nhất):\n` +
+                        `   • Trí tuệ và tư duy kỹ thuật cao nhất dòng Flash.\n` +
+                        `   • Xử lý logic và phân tích mã nguồn cực mạnh.\n\n` +
                         `👇 _Chạm vào nút bên dưới để chuyển đổi ngay:_`;
 
                     replyMarkup = {
                         inline_keyboard: [
                             [
                                 { 
-                                    text: currentModel === 'gemini-2.5-flash-lite' ? '✅ ⚡ 2.5 Flash-Lite (Đang dùng)' : '⚡ 2.5 Flash-Lite (Siêu tốc)', 
-                                    callback_data: '/setmodel gemini-2.5-flash-lite' 
+                                    text: currentModel === 'gemini-2.5-flash' ? '✅ ⚡ 2.5 Flash (Đang dùng)' : '⚡ 2.5 Flash (Tốc độ cao & Search)', 
+                                    callback_data: '/setmodel gemini-2.5-flash' 
                                 }
                             ],
                             [
                                 { 
-                                    text: currentModel === 'gemini-2.5-flash' ? '✅ 🧠 2.5 Flash (Đang dùng)' : '🧠 2.5 Flash (Tư duy sâu)', 
-                                    callback_data: '/setmodel gemini-2.5-flash' 
+                                    text: currentModel === 'gemini-3.8-flash' ? '✅ 🚀 3.8 Flash (Đang dùng)' : '🚀 3.8 Flash (Thế hệ mới nhất)', 
+                                    callback_data: '/setmodel gemini-3.8-flash' 
                                 }
                             ],
                             [
@@ -200,7 +206,7 @@ export default async function handler(req, res) {
                     const parts = text.split(/\s+/);
                     const chosenModel = parts[1] ? parts[1].trim() : null;
 
-                    if (chosenModel === 'gemini-2.5-flash-lite' || chosenModel === 'gemini-2.5-flash') {
+                    if (chosenModel === 'gemini-2.5-flash' || chosenModel === 'gemini-3.8-flash') {
                         await supabase
                             .from('user_sessions')
                             .upsert({ 
@@ -209,7 +215,7 @@ export default async function handler(req, res) {
                                 last_active: new Date().toISOString() 
                             }, { onConflict: 'chat_id' });
 
-                        const modelBadge = chosenModel === 'gemini-2.5-flash-lite' ? '⚡ Gemini 2.5 Flash-Lite' : '🧠 Gemini 2.5 Flash';
+                        const modelBadge = chosenModel === 'gemini-2.5-flash' ? '⚡ Gemini 2.5 Flash' : '🚀 Gemini 3.8 Flash';
 
                         replyText = `✅ *Đã chuyển thành công sang model:*\n👉 *${modelBadge}*\n\n` +
                             `Kể từ bây giờ, mọi câu hỏi và phân tích của bạn sẽ được xử lý bằng model này!`;
@@ -223,9 +229,10 @@ export default async function handler(req, res) {
                             ]
                         };
                     } else {
-                        replyText = `⚠️ Model không hợp lệ. Vui lòng chọn trong danh sách: \`gemini-2.5-flash-lite\` hoặc \`gemini-2.5-flash\`.`;
+                        replyText = `⚠️ Model không hợp lệ. Vui lòng chọn trong danh sách: \`gemini-2.5-flash\` hoặc \`gemini-3.8-flash\`.`;
                     }
                 }
+
 
 
                 // 1.5 Tự động phát hiện link GitHub repo
@@ -378,7 +385,8 @@ export default async function handler(req, res) {
                         .eq('chat_id', chatId)
                         .maybeSingle();
 
-                    const selectedModel = (session && session.selected_model) || 'gemini-2.5-flash-lite';
+                    const selectedModel = (session && session.selected_model) || 'gemini-2.5-flash';
+
 
                     // Nếu chưa chọn repo, thử phân tích ngôn ngữ tự nhiên để nhận diện repo được nhắc tới
                     if (!session || !session.active_repo) {

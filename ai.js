@@ -3,13 +3,14 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // 1. Khởi tạo Gemini với API Key của bạn
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-export async function summarizeWithAI(reposData) {
-    console.log(`🧠 Đang nhờ Gemini (${GEMINI_MODEL}) đọc README và viết tóm tắt...`);
+export async function summarizeWithAI(reposData, userModel = null) {
+    const targetModel = userModel || GEMINI_MODEL;
+    console.log(`🧠 Đang nhờ Gemini (${targetModel}) đọc README và viết tóm tắt...`);
 
-    // Dùng model gemini-2.5-flash-lite (tối ưu số lượt gọi, nhẹ và tốc độ cao)
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+    const model = genAI.getGenerativeModel({ model: targetModel });
+
 
     // 2. Kỹ năng Prompt Engineering: Ra lệnh cho AI
     const prompt = `
