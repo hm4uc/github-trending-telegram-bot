@@ -5,21 +5,37 @@ import { supabase } from '../db.js';
 export default async function handler(req, res) {
     if (req.method === 'POST') {
         const body = req.body;
+        const BOT_TOKEN = process.env.BOT_TOKEN;
 
-        if (body.message && body.message.text) {
-            const chatId = body.message.chat.id;
-            const from = body.message.from || {};
+        // Xử lý cả tin nhắn văn bản lẫn sự kiện bấm nút Inline Keyboard (callback_query)
+        let message = body.message;
+
+        if (body.callback_query) {
+            // Xác nhận ngay với Telegram để tắt biểu tượng quay tròn loading trên nút bấm
+            await answerCallbackQuery(body.callback_query.id, BOT_TOKEN);
+
+            message = {
+                chat: body.callback_query.message ? body.callback_query.message.chat : { id: body.callback_query.from.id },
+                from: body.callback_query.from,
+                text: body.callback_query.data
+            };
+        }
+
+        if (message && message.text) {
+            const chatId = message.chat.id;
+            const from = message.from || {};
             const username = from.username || '';
             const firstName = from.first_name || '';
-            const text = body.message.text.trim();
+            const text = message.text.trim();
             const lowerText = text.toLowerCase();
-            const BOT_TOKEN = process.env.BOT_TOKEN;
 
             let replyText = '';
+            let replyMarkup = null;
 
             try {
                 // Hiển thị trạng thái "đang gõ tin nhắn" cho người dùng ngay lập tức
                 await sendChatAction(chatId, 'typing', BOT_TOKEN);
+
 
                 // 0. Rate limiting cơ bản: Giới hạn tối đa 15 tin nhắn/phút cho mỗi user
                 const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
@@ -59,17 +75,37 @@ export default async function handler(req, res) {
 
                     replyText = `🤖 *Chào mừng${greetingName} đến với GitHub Trending AI Bot!*\n\n` +
                         `✅ _Bạn đã được tự động đăng ký nhận bản tin tổng hợp xu hướng mã nguồn mở mỗi ngày lúc 7h sáng._\n\n` +
-                        `📌 *Các tính năng bạn có thể sử dụng:*\n` +
-                        `1️⃣ Gõ */trending5* hoặc */trending10* để xem xu hướng hôm nay (Mặc định 5, tối đa 10).\n` +
-                        `2️⃣ Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` hoặc đặt câu hỏi tự nhiên chứa tên dự án để kết nối hỏi đáp.\n` +
-                        `   _Ví dụ: /ask commaai/openpilot hoặc "dự án openpilot làm được gì?"_\n` +
-                        `3️⃣ Gõ \`/status\` để kiểm tra dự án bạn đang kết nối hỏi đáp.\n` +
-                        `4️⃣ Gửi thẳng một đường **link GitHub Repository** để hệ thống tự động cào dữ liệu, tóm tắt và kết nối hỏi đáp.\n` +
-                        `   _Ví dụ: https://github.com/simplex-chat/simplex-chat_\n` +
-                        `5️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trợ lý AI tự do.\n` +
-                        `6️⃣ Gõ \`/unsubscribe\` để tắt nhận tin hàng ngày, hoặc \`/subscribe\` để bật lại bất kỳ lúc nào.\n\n` +
-                        `💡 _Mẹo: Khi đã chọn dự án, bạn cứ hỏi tự nhiên. Bot sẽ tự tra cứu README của dự án trước, nếu thiếu sẽ tự tìm kiếm Google!_`;
+                        `📌 *Chọn nhanh tính năng bằng các nút bên dưới hoặc gõ lệnh:*\n` +
+                        `• */trending5* hoặc */trending10*: Xem top xu hướng hôm nay.\n` +
+                        `• \`/ask <chủ_sở_hữu>/<tên_repo>\`: Kết nối hỏi đáp chuyên sâu theo README.\n` +
+                        `• \`/status\`: Kiểm tra dự án đang kết nối hỏi đáp.\n` +
+                        `• Gửi link GitHub: Tự động cào dữ liệu, tóm tắt và kích hoạt hỏi đáp.\n` +
+                        `• \`/exit\` hoặc \`/clear\`: Thoát chế độ hỏi đáp dự án, về chat tự do.\n` +
+                        `• \`/subscribe\` / \`/unsubscribe\`: Bật/tắt nhận bản tin 7h sáng.\n\n` +
+                        `👇 _Chạm vào các nút bên dưới để trải nghiệm ngay:_`;
+
+                    // Bàn phím nút bấm trực quan (Inline Keyboard) dưới tin nhắn
+                    replyMarkup = {
+                        inline_keyboard: [
+                            [
+                                { text: '🔥 Top 5 Trending', callback_data: '/trending5' },
+                                { text: '⭐ Top 10 Trending', callback_data: '/trending10' }
+                            ],
+                            [
+                                { text: '🎯 Trạng thái kết nối', callback_data: '/status' },
+                                { text: '❓ Hướng dẫn sử dụng', callback_data: '/help' }
+                            ],
+                            [
+                                { text: '🔔 Nhận tin 7h sáng', callback_data: '/subscribe' },
+                                { text: '🔕 Tắt nhận tin', callback_data: '/unsubscribe' }
+                            ],
+                            [
+                                { text: '🚪 Thoát hỏi đáp repo', callback_data: '/clear' }
+                            ]
+                        ]
+                    };
                 }
+
                 // 1.1 Lệnh bật/tắt nhận bản tin định kỳ
                 else if (lowerText === '/subscribe') {
                     await supabase.from('subscribers').upsert({
@@ -343,7 +379,7 @@ export default async function handler(req, res) {
 
             // Gửi kết quả cuối cùng cho người dùng
             if (replyText) {
-                await sendMessage(chatId, replyText, BOT_TOKEN);
+                await sendMessage(chatId, replyText, BOT_TOKEN, replyMarkup);
             }
         }
     }
@@ -351,37 +387,55 @@ export default async function handler(req, res) {
     res.status(200).json({ ok: true });
 }
 
-// Hàm phụ gửi tin với cơ chế fallback nếu lỗi Markdown
-async function sendMessage(chatId, text, token) {
+// Hàm phụ gửi tin với cơ chế fallback nếu lỗi Markdown và hỗ trợ Inline Keyboard
+async function sendMessage(chatId, text, token, replyMarkup = null) {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const payload = {
+        chat_id: chatId,
+        text: text,
+        parse_mode: 'Markdown',
+        disable_web_page_preview: true
+    };
+    if (replyMarkup) {
+        payload.reply_markup = replyMarkup;
+    }
+
     try {
         let response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: text,
-                parse_mode: 'Markdown',
-                disable_web_page_preview: true
-            })
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
             console.warn('⚠️ Gửi Markdown thất bại, thử lại dưới dạng văn bản thường...');
+            payload.parse_mode = undefined;
             await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: text,
-                    disable_web_page_preview: true
-                })
+                body: JSON.stringify(payload)
             });
         }
     } catch (error) {
         console.error('❌ Lỗi kết nối Telegram:', error);
     }
 }
+
+// Hàm phản hồi sự kiện click nút bấm (để Telegram tắt icon loading xoay tròn)
+async function answerCallbackQuery(callbackQueryId, token) {
+    if (!token || !callbackQueryId) return;
+    const url = `https://api.telegram.org/bot${token}/answerCallbackQuery`;
+    try {
+        await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callback_query_id: callbackQueryId })
+        });
+    } catch (e) {
+        // Lỗi answerCallbackQuery không ảnh hưởng đến luồng chính
+    }
+}
+
 
 // Hàm gửi tín hiệu trạng thái (ví dụ: typing - đang soạn tin)
 async function sendChatAction(chatId, action = 'typing', token) {
