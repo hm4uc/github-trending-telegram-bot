@@ -3,12 +3,13 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // 1. Khởi tạo Gemini với API Key của bạn
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 
 export async function summarizeWithAI(reposData) {
-    console.log('🧠 Đang nhờ Gemini đọc README và viết tóm tắt...');
+    console.log(`🧠 Đang nhờ Gemini (${GEMINI_MODEL}) đọc README và viết tóm tắt...`);
 
-    // Dùng model gemini-2.5-flash (tốc độ cực nhanh, chuyên xử lý text dài)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    // Dùng model gemini-2.5-flash-lite (tối ưu số lượt gọi, nhẹ và tốc độ cao)
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
     // 2. Kỹ năng Prompt Engineering: Ra lệnh cho AI
     const prompt = `
@@ -61,7 +62,7 @@ Nguyên tắc trả lời:
 
     try {
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
+            model: GEMINI_MODEL,
             systemInstruction: systemInstruction
         });
 
@@ -99,7 +100,7 @@ export async function answerWithSearch(question, repoName = null, history = []) 
 
     try {
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
+            model: GEMINI_MODEL,
             systemInstruction: systemInstruction,
             tools: [{ googleSearch: {} }]
         });
@@ -122,7 +123,7 @@ export async function answerWithSearch(question, repoName = null, history = []) 
             console.log('🔄 Đang thử lại câu hỏi sử dụng kiến thức có sẵn của AI (không có Google Search)...');
             try {
                 const modelWithoutSearch = genAI.getGenerativeModel({
-                    model: "gemini-2.5-flash",
+                    model: GEMINI_MODEL,
                     systemInstruction: systemInstruction
                 });
 
@@ -157,7 +158,7 @@ Quy tắc phản hồi:
 `;
 
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
         const result = await model.generateContent(prompt);
         const matched = result.response.text().replace(/[`"']/g, '').trim();
         return matched !== 'NONE' ? matched : null;
