@@ -58,16 +58,16 @@ export default async function handler(req, res) {
                     const greetingName = firstName ? ` ${firstName}` : '';
 
                     replyText = `🤖 *Chào mừng${greetingName} đến với GitHub Trending AI Bot!*\n\n` +
-                        `✅ _Bạn đã được tự động đăng ký nhận bản tin tổng hợp xu hướng mã nguồn mở mỗi ngày lúc 0h._\n\n` +
+                        `✅ _Bạn đã được tự động đăng ký nhận bản tin tổng hợp xu hướng mã nguồn mở mỗi ngày lúc 7h sáng._\n\n` +
                         `📌 *Các tính năng bạn có thể sử dụng:*\n` +
-                        `1️⃣ Gõ *trending [số_lượng]* hoặc */trending [số_lượng]* để xem xu hướng hôm nay (Mặc định 5, tối đa 10).\n` +
-                        `   _Ví dụ: /trending 5_\n` +
+                        `1️⃣ Gõ */trending5* hoặc */trending10* để xem xu hướng hôm nay (Mặc định 5, tối đa 10).\n` +
                         `2️⃣ Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` hoặc đặt câu hỏi tự nhiên chứa tên dự án để kết nối hỏi đáp.\n` +
                         `   _Ví dụ: /ask commaai/openpilot hoặc "dự án openpilot làm được gì?"_\n` +
-                        `3️⃣ Gửi thẳng một đường **link GitHub Repository** để hệ thống cào dữ liệu, lưu trữ, tóm tắt và tự động kết nối hỏi đáp.\n` +
+                        `3️⃣ Gõ \`/status\` để kiểm tra dự án bạn đang kết nối hỏi đáp.\n` +
+                        `4️⃣ Gửi thẳng một đường **link GitHub Repository** để hệ thống tự động cào dữ liệu, tóm tắt và kết nối hỏi đáp.\n` +
                         `   _Ví dụ: https://github.com/simplex-chat/simplex-chat_\n` +
-                        `4️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trợ lý AI tự do.\n` +
-                        `5️⃣ Gõ \`/unsubscribe\` để tắt nhận tin hàng ngày, hoặc \`/subscribe\` để bật lại bất kỳ lúc nào.\n\n` +
+                        `5️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trợ lý AI tự do.\n` +
+                        `6️⃣ Gõ \`/unsubscribe\` để tắt nhận tin hàng ngày, hoặc \`/subscribe\` để bật lại bất kỳ lúc nào.\n\n` +
                         `💡 _Mẹo: Khi đã chọn dự án, bạn cứ hỏi tự nhiên. Bot sẽ tự tra cứu README của dự án trước, nếu thiếu sẽ tự tìm kiếm Google!_`;
                 }
                 // 1.1 Lệnh bật/tắt nhận bản tin định kỳ
@@ -80,13 +80,31 @@ export default async function handler(req, res) {
                     }, { onConflict: 'chat_id' });
 
                     replyText = `🔔 *Đã bật nhận bản tin thành công!*\n` +
-                        `Bạn sẽ nhận được bản tin phân tích top dự án GitHub Trending mỗi ngày vào lúc 0h sáng.`;
+                        `Bạn sẽ nhận được bản tin phân tích top dự án GitHub Trending mỗi ngày vào lúc 7h sáng.`;
                 }
                 else if (lowerText === '/unsubscribe') {
                     await supabase.from('subscribers').update({ is_active: false }).eq('chat_id', chatId);
 
                     replyText = `🔕 *Đã tắt nhận bản tin hàng ngày!*\n` +
                         `Bạn sẽ không còn nhận bản tin tự động nữa. Bạn vẫn có thể sử dụng các lệnh khác bình thường, hoặc gõ \`/subscribe\` để bật lại bất cứ lúc nào.`;
+                }
+
+                // 1.2 Lệnh kiểm tra trạng thái kết nối repo
+                else if (lowerText === '/status') {
+                    const { data: session } = await supabase
+                        .from('user_sessions')
+                        .select('active_repo')
+                        .eq('chat_id', chatId)
+                        .maybeSingle();
+
+                    if (session && session.active_repo) {
+                        replyText = `🎯 Bạn đang kết nối với dự án: *${session.active_repo}*.\n\n` +
+                            `Mọi câu hỏi của bạn sẽ được AI giải đáp dựa trên tài liệu README thật của dự án này.\n` +
+                            `👉 Gõ \`/exit\` hoặc \`/clear\` để thoát về chế độ trợ lý tự do.`;
+                    } else {
+                        replyText = `🌐 Bạn hiện đang ở chế độ *Trò chuyện tự do* (chưa kết nối với dự án cụ thể nào).\n\n` +
+                            `👉 Để kết nối với một dự án: Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` hoặc gửi thẳng link GitHub vào đây.`;
+                    }
                 }
 
                 // 1.5 Tự động phát hiện link GitHub repo
@@ -147,17 +165,17 @@ export default async function handler(req, res) {
                         replyText = `❌ Không thể cào dữ liệu dự án từ link này: ${scrapeErr.message}`;
                     }
                 }
-                // 2. Lệnh xem trending
+                // 2. Lệnh xem trending (hỗ trợ /trending, /trending5, /trending10 hoặc trending 10)
                 else if (lowerText.startsWith('trending') || lowerText.startsWith('/trending')) {
-                    // Phân tách để lấy số lượng yêu cầu (mặc định là 5, tối đa 10 để tránh quá tải tin nhắn)
-                    const parts = lowerText.split(/\s+/);
                     let limit = 5;
-                    if (parts[1] && !isNaN(parts[1])) {
-                        limit = Math.min(Math.max(parseInt(parts[1]), 1), 10);
+                    const match = lowerText.match(/^\/?trending\s*(\d+)/);
+                    if (match && match[1]) {
+                        limit = Math.min(Math.max(parseInt(match[1]), 1), 10);
                     }
 
                     replyText = `⏳ Đang đọc dữ liệu top ${limit} từ database và phân tích, anh đợi xíu nhé...`;
                     await sendMessage(chatId, replyText, BOT_TOKEN);
+
 
                     // Lấy các dự án mới nhất từ Database (không đi cào lại trực tiếp để tránh timeout trên Vercel)
                     const { data: reposData } = await supabase
