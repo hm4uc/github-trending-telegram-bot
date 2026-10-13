@@ -24,3 +24,18 @@ CREATE TABLE IF NOT EXISTS chat_history (
     content TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 4. Table for managing subscribers (daily cron broadcasts for multiple users)
+CREATE TABLE IF NOT EXISTS subscribers (
+    chat_id BIGINT PRIMARY KEY,
+    username VARCHAR(255),
+    first_name VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    subscribed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. Performance Indexes for multi-user scale
+CREATE INDEX IF NOT EXISTS idx_chat_history_chat_id_created_at ON chat_history (chat_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_repositories_scraped_at ON repositories (scraped_at DESC);
+CREATE INDEX IF NOT EXISTS idx_subscribers_active ON subscribers (is_active);
+

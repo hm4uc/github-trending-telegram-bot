@@ -8,6 +8,9 @@ export default async function handler(req, res) {
 
         if (body.message && body.message.text) {
             const chatId = body.message.chat.id;
+            const from = body.message.from || {};
+            const username = from.username || '';
+            const firstName = from.first_name || '';
             const text = body.message.text.trim();
             const lowerText = text.toLowerCase();
             const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -15,6 +18,23 @@ export default async function handler(req, res) {
             let replyText = '';
 
             try {
+                // Hiển thị trạng thái "đang gõ tin nhắn" cho người dùng ngay lập tức
+                await sendChatAction(chatId, 'typing', BOT_TOKEN);
+
+                // 0. Rate limiting cơ bản: Giới hạn tối đa 15 tin nhắn/phút cho mỗi user
+                const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+                const { count: recentMsgCount } = await supabase
+                    .from('chat_history')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('chat_id', chatId)
+                    .eq('role', 'user')
+                    .gte('created_at', oneMinuteAgo);
+
+                if (recentMsgCount !== null && recentMsgCount >= 15) {
+                    await sendMessage(chatId, '⚠️ *Bạn đang gửi tin nhắn quá nhanh!*\nVui lòng đợi 1 phút trước khi tiếp tục trò chuyện nhé.', BOT_TOKEN);
+                    return res.status(200).json({ ok: true });
+                }
+
                 // Phát hiện xem tin nhắn có chứa link GitHub repository hay không
                 const githubRegex = /https?:\/\/(www\.)?github\.com\/([a-zA-Z0-9-._]+)\/([a-zA-Z0-9-._]+)/i;
                 const githubMatch = text.match(githubRegex);
@@ -27,17 +47,48 @@ export default async function handler(req, res) {
 
                 // 1. Nhóm lệnh START / HELP
                 if (lowerText === '/start' || lowerText === '/help') {
-                    replyText = `🤖 *Chào mừng bạn đến với GitHub Trending AI Bot!*\n\n` +
-                        `Các lệnh bạn có thể sử dụng:\n` +
-                        `1️⃣ Gõ *trending [số_lượng]* hoặc */trending [số_lượng]* để xem xu hướng hôm nay (Mặc định là 5, tối đa là 10).\n` +
-                        `   _Ví dụ: /trending 10_\n` +
+                    // Tự động đăng ký user mới vào danh sách nhận bản tin hàng ngày
+                    await supabase.from('subscribers').upsert({
+                        chat_id: chatId,
+                        username: username,
+                        first_name: firstName,
+                        is_active: true
+                    }, { onConflict: 'chat_id' });
+
+                    const greetingName = firstName ? ` ${firstName}` : '';
+
+                    replyText = `🤖 *Chào mừng${greetingName} đến với GitHub Trending AI Bot!*\n\n` +
+                        `✅ _Bạn đã được tự động đăng ký nhận bản tin tổng hợp xu hướng mã nguồn mở mỗi ngày lúc 0h._\n\n` +
+                        `📌 *Các tính năng bạn có thể sử dụng:*\n` +
+                        `1️⃣ Gõ *trending [số_lượng]* hoặc */trending [số_lượng]* để xem xu hướng hôm nay (Mặc định 5, tối đa 10).\n` +
+                        `   _Ví dụ: /trending 5_\n` +
                         `2️⃣ Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` hoặc đặt câu hỏi tự nhiên chứa tên dự án để kết nối hỏi đáp.\n` +
                         `   _Ví dụ: /ask commaai/openpilot hoặc "dự án openpilot làm được gì?"_\n` +
-                        `3️⃣ Gửi thẳng một đường **link GitHub Repository** để hệ thống cào dữ liệu, lưu vào database, tóm tắt và tự động kết nối hỏi đáp.\n` +
+                        `3️⃣ Gửi thẳng một đường **link GitHub Repository** để hệ thống cào dữ liệu, lưu trữ, tóm tắt và tự động kết nối hỏi đáp.\n` +
                         `   _Ví dụ: https://github.com/simplex-chat/simplex-chat_\n` +
-                        `4️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trò chuyện chung.\n` +
-                        `5️⃣ Khi đã chọn dự án, bạn cứ hỏi thoải mái. Tôi sẽ tự tra cứu README của dự án trước, nếu không có mới tìm kiếm Google.`;
+                        `4️⃣ Gõ \`/exit\` hoặc \`/clear\` để thoát chế độ hỏi đáp dự án, chuyển về trợ lý AI tự do.\n` +
+                        `5️⃣ Gõ \`/unsubscribe\` để tắt nhận tin hàng ngày, hoặc \`/subscribe\` để bật lại bất kỳ lúc nào.\n\n` +
+                        `💡 _Mẹo: Khi đã chọn dự án, bạn cứ hỏi tự nhiên. Bot sẽ tự tra cứu README của dự án trước, nếu thiếu sẽ tự tìm kiếm Google!_`;
                 }
+                // 1.1 Lệnh bật/tắt nhận bản tin định kỳ
+                else if (lowerText === '/subscribe') {
+                    await supabase.from('subscribers').upsert({
+                        chat_id: chatId,
+                        username: username,
+                        first_name: firstName,
+                        is_active: true
+                    }, { onConflict: 'chat_id' });
+
+                    replyText = `🔔 *Đã bật nhận bản tin thành công!*\n` +
+                        `Bạn sẽ nhận được bản tin phân tích top dự án GitHub Trending mỗi ngày vào lúc 0h sáng.`;
+                }
+                else if (lowerText === '/unsubscribe') {
+                    await supabase.from('subscribers').update({ is_active: false }).eq('chat_id', chatId);
+
+                    replyText = `🔕 *Đã tắt nhận bản tin hàng ngày!*\n` +
+                        `Bạn sẽ không còn nhận bản tin tự động nữa. Bạn vẫn có thể sử dụng các lệnh khác bình thường, hoặc gõ \`/subscribe\` để bật lại bất cứ lúc nào.`;
+                }
+
                 // 1.5 Tự động phát hiện link GitHub repo
                 else if (githubMatch && !reservedKeywords.has(githubMatch[2].toLowerCase())) {
                     const owner = githubMatch[2];
@@ -238,11 +289,13 @@ export default async function handler(req, res) {
                             .maybeSingle();
 
                         if (repo) {
+                            await sendChatAction(chatId, 'typing', BOT_TOKEN);
                             let answer = await answerRepoQuestion(repo.readme, repo.repo_name, text, history || []);
 
                             // Nếu AI xác định câu hỏi nằm ngoài README, tiến hành tìm kiếm Google
                             if (answer.includes('[OUT_OF_SCOPE]')) {
                                 await sendMessage(chatId, `🔍 Câu hỏi nằm ngoài tài liệu README của dự án *${repo.repo_name}*. Đang tìm kiếm thêm thông tin trên internet...`, BOT_TOKEN);
+                                await sendChatAction(chatId, 'typing', BOT_TOKEN);
 
                                 const searchAnswer = await answerWithSearch(text, repo.repo_name, history || []);
                                 replyText = `🌐 *[Kết quả tìm kiếm internet về ${repo.repo_name}]*:\n\n${searchAnswer}`;
@@ -254,6 +307,7 @@ export default async function handler(req, res) {
                         }
                     } else {
                         // Hỏi đáp tự do ngoài dự án
+                        await sendChatAction(chatId, 'typing', BOT_TOKEN);
                         const searchAnswer = await answerWithSearch(text, null, history || []);
                         replyText = `🌐 *[Trợ lý AI]*:\n\n${searchAnswer}`;
                     }
@@ -310,6 +364,22 @@ async function sendMessage(chatId, text, token) {
         console.error('❌ Lỗi kết nối Telegram:', error);
     }
 }
+
+// Hàm gửi tín hiệu trạng thái (ví dụ: typing - đang soạn tin)
+async function sendChatAction(chatId, action = 'typing', token) {
+    if (!token || !chatId) return;
+    const url = `https://api.telegram.org/bot${token}/sendChatAction`;
+    try {
+        await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, action: action })
+        });
+    } catch (e) {
+        // Lỗi gửi typing không ảnh hưởng đến luồng chính
+    }
+}
+
 
 // Hàm so khớp nhanh tên dự án bằng từ khóa cục bộ (0ms, tiết kiệm API Quota)
 function quickMatchRepo(text, repos) {

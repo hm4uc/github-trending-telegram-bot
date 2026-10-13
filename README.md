@@ -60,13 +60,17 @@ A serverless Telegram Bot that tracks top trending repositories on GitHub, summa
    SUPABASE_KEY=your_supabase_service_role_key
    ```
 
-## Usage
+## Usage & Commands
 
-### Interactive Q&A Features
+### Interactive Q&A & Multi-User Commands
 
-Your bot supports intelligent conversational Q&A:
-- **/trending**: Scrapes the daily top 5 trending repositories, saves them to your database, and sends the AI summary.
+Your bot supports multi-user conversational Q&A and automated notifications:
+- **/start** or **/help**: Welcome menu. Automatically registers the user as an active subscriber for daily trending broadcasts.
+- **/trending [count]**: Displays top trending repositories (default is 5, max 10).
 - **/ask <owner/repo>**: Connects you to a specific repository in the database (e.g. `/ask commaai/openpilot`). Your subsequent messages will be answered using its actual `README.md` content (RAG).
+- **Send GitHub Link**: Paste any GitHub repo URL (e.g. `https://github.com/simplex-chat/simplex-chat`) and the bot will scrape, summarize, and start a Q&A session on that repo automatically.
+- **/subscribe**: Turn ON daily trending news digest at 00:00 UTC.
+- **/unsubscribe**: Turn OFF daily trending news digest.
 - **Auto Google Search Grounding**: If you ask a question outside the scope of the project's README, the bot will automatically fall back to internet search to retrieve the correct answer.
 - **/exit** or **/clear**: Clears the current active repository session and returns to free-form AI chat.
 
@@ -77,14 +81,19 @@ To run the scraper and update your database cache manually:
 node main.js
 ```
 
-
-### Deploying to Vercel
+### Deploying to Vercel & Setting Webhook
 
 1. Install the Vercel CLI or deploy via the Vercel Dashboard connected to your GitHub repository.
 2. Set the following Environment Variables in your Vercel Project Settings:
    - `BOT_TOKEN`
-   - `CHAT_ID`
    - `GEMINI_API_KEY`
    - `SUPABASE_URL`
    - `SUPABASE_KEY`
-3. The cron job is configured in `vercel.json` to trigger every day at midnight (`0 0 * * *`) via `/api/cron`.
+   - `CHAT_ID` (optional fallback for admin notification)
+3. Set your Telegram Bot Webhook:
+   Replace `<BOT_TOKEN>` and `<YOUR_VERCEL_URL>` in the following URL and open it in your browser:
+   ```text
+   https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=https://<YOUR_VERCEL_URL>/api/webhook
+   ```
+4. The cron job is configured in `vercel.json` to trigger every day at midnight (`0 0 * * *`) via `/api/cron`, broadcasting to all active subscribers.
+
