@@ -65,14 +65,17 @@ A serverless Telegram Bot that tracks top trending repositories on GitHub, summa
 ### Interactive Q&A & Multi-User Commands
 
 Your bot supports multi-user conversational Q&A and automated notifications:
-- **/start** or **/help**: Welcome menu. Automatically registers the user as an active subscriber for daily trending broadcasts.
-- **/trending [count]**: Displays top trending repositories (default is 5, max 10).
+- **/start** or **/help**: Welcome menu with interactive inline buttons. Automatically registers the user as an active subscriber for daily trending broadcasts.
+- **/trending5** / **/trending10**: Displays top 5 or 10 trending repositories.
+- **/model**: Switch between `gemini-2.5-flash-lite` (ultra fast, high throughput) and `gemini-2.5-flash` (deep reasoning).
+- **/status**: Shows your currently active repository and currently selected AI model.
 - **/ask <owner/repo>**: Connects you to a specific repository in the database (e.g. `/ask commaai/openpilot`). Your subsequent messages will be answered using its actual `README.md` content (RAG).
 - **Send GitHub Link**: Paste any GitHub repo URL (e.g. `https://github.com/simplex-chat/simplex-chat`) and the bot will scrape, summarize, and start a Q&A session on that repo automatically.
-- **/subscribe**: Turn ON daily trending news digest at 00:00 UTC.
+- **/subscribe**: Turn ON daily trending news digest at 7:00 AM (00:00 UTC).
 - **/unsubscribe**: Turn OFF daily trending news digest.
 - **Auto Google Search Grounding**: If you ask a question outside the scope of the project's README, the bot will automatically fall back to internet search to retrieve the correct answer.
 - **/exit** or **/clear**: Clears the current active repository session and returns to free-form AI chat.
+
 
 ### Running Locally
 

@@ -9,12 +9,17 @@ CREATE TABLE IF NOT EXISTS repositories (
     scraped_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Table for managing user sessions (active repo being questioned)
+-- 2. Table for managing user sessions (active repo being questioned & selected AI model)
 CREATE TABLE IF NOT EXISTS user_sessions (
     chat_id BIGINT PRIMARY KEY,
     active_repo VARCHAR(255),
+    selected_model VARCHAR(100) DEFAULT 'gemini-2.5-flash-lite',
     last_active TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Migration nếu bảng user_sessions đã tồn tại từ trước:
+ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS selected_model VARCHAR(100) DEFAULT 'gemini-2.5-flash-lite';
+
 
 -- 3. Table for storing user chat history (for conversational context)
 CREATE TABLE IF NOT EXISTS chat_history (

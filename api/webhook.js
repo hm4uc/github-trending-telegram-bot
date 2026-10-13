@@ -93,7 +93,7 @@ export default async function handler(req, res) {
                             ],
                             [
                                 { text: '🎯 Trạng thái kết nối', callback_data: '/status' },
-                                { text: '❓ Hướng dẫn sử dụng', callback_data: '/help' }
+                                { text: '⚙️ Đổi AI Model', callback_data: '/model' }
                             ],
                             [
                                 { text: '🔔 Nhận tin 7h sáng', callback_data: '/subscribe' },
@@ -125,23 +125,108 @@ export default async function handler(req, res) {
                         `Bạn sẽ không còn nhận bản tin tự động nữa. Bạn vẫn có thể sử dụng các lệnh khác bình thường, hoặc gõ \`/subscribe\` để bật lại bất cứ lúc nào.`;
                 }
 
-                // 1.2 Lệnh kiểm tra trạng thái kết nối repo
+                // 1.2 Lệnh kiểm tra trạng thái kết nối repo & model đang dùng
                 else if (lowerText === '/status') {
                     const { data: session } = await supabase
                         .from('user_sessions')
-                        .select('active_repo')
+                        .select('active_repo, selected_model')
                         .eq('chat_id', chatId)
                         .maybeSingle();
 
-                    if (session && session.active_repo) {
-                        replyText = `🎯 Bạn đang kết nối với dự án: *${session.active_repo}*.\n\n` +
-                            `Mọi câu hỏi của bạn sẽ được AI giải đáp dựa trên tài liệu README thật của dự án này.\n` +
-                            `👉 Gõ \`/exit\` hoặc \`/clear\` để thoát về chế độ trợ lý tự do.`;
+                    const currentModel = (session && session.selected_model) || 'gemini-2.5-flash-lite';
+                    const activeRepo = session && session.active_repo;
+
+                    replyText = `📊 *TRẠNG THÁI TÀI KHOẢN CỦA BẠN:*\n\n` +
+                        `🤖 *Model AI đang dùng:* \`${currentModel}\`\n` +
+                        `🎯 *Dự án kết nối:* ${activeRepo ? `*${activeRepo}*` : '_Chưa chọn (Trò chuyện tự do)_'}\n\n` +
+                        `👉 Bấm nút bên dưới hoặc gõ \`/model\` để đổi model AI.\n` +
+                        (activeRepo ? `👉 Gõ \`/exit\` để thoát về chế độ trợ lý tự do.` : `👉 Gõ \`/ask <repo>\` hoặc gửi link GitHub để kết nối dự án.`);
+
+                    replyMarkup = {
+                        inline_keyboard: [
+                            [
+                                { text: '⚙️ Đổi AI Model', callback_data: '/model' },
+                                { text: '🔥 Xem Trending', callback_data: '/trending5' }
+                            ]
+                        ]
+                    };
+                }
+
+                // 1.3 Lệnh hiển thị menu đổi Model AI
+                else if (lowerText === '/model') {
+                    const { data: session } = await supabase
+                        .from('user_sessions')
+                        .select('selected_model')
+                        .eq('chat_id', chatId)
+                        .maybeSingle();
+
+                    const currentModel = (session && session.selected_model) || 'gemini-2.5-flash-lite';
+
+                    replyText = `⚙️ *CÀI ĐẶT MODEL AI*\n\n` +
+                        `🤖 *Model bạn đang sử dụng:* \`${currentModel}\`\n\n` +
+                        `*Chọn 1 trong 2 model tối ưu nhất dưới đây:*\n\n` +
+                        `1️⃣ *Gemini 2.5 Flash-Lite* (Khuyên dùng):\n` +
+                        `   • Tốc độ sinh text siêu tốc, nhẹ, ít nghẽn.\n` +
+                        `   • Hạn mức lượt gọi cao, hiếm khi bị 429.\n` +
+                        `   • Tặng kèm 500-1500 lượt tìm kiếm Google/ngày.\n\n` +
+                        `2️⃣ *Gemini 2.5 Flash*:\n` +
+                        `   • Tư duy lập trình sâu hơn, trả lời chi tiết hơn.\n` +
+                        `   • Tặng kèm 500-1500 lượt tìm kiếm Google/ngày.\n\n` +
+                        `👇 _Chạm vào nút bên dưới để chuyển đổi ngay:_`;
+
+                    replyMarkup = {
+                        inline_keyboard: [
+                            [
+                                { 
+                                    text: currentModel === 'gemini-2.5-flash-lite' ? '✅ ⚡ 2.5 Flash-Lite (Đang dùng)' : '⚡ 2.5 Flash-Lite (Siêu tốc)', 
+                                    callback_data: '/setmodel gemini-2.5-flash-lite' 
+                                }
+                            ],
+                            [
+                                { 
+                                    text: currentModel === 'gemini-2.5-flash' ? '✅ 🧠 2.5 Flash (Đang dùng)' : '🧠 2.5 Flash (Tư duy sâu)', 
+                                    callback_data: '/setmodel gemini-2.5-flash' 
+                                }
+                            ],
+                            [
+                                { text: '« Quay lại Menu chính', callback_data: '/help' }
+                            ]
+                        ]
+                    };
+                }
+
+                // 1.4 Lệnh kích hoạt đổi model được chọn
+                else if (lowerText.startsWith('/setmodel')) {
+                    const parts = text.split(/\s+/);
+                    const chosenModel = parts[1] ? parts[1].trim() : null;
+
+                    if (chosenModel === 'gemini-2.5-flash-lite' || chosenModel === 'gemini-2.5-flash') {
+                        await supabase
+                            .from('user_sessions')
+                            .upsert({ 
+                                chat_id: chatId, 
+                                selected_model: chosenModel,
+                                last_active: new Date().toISOString() 
+                            }, { onConflict: 'chat_id' });
+
+                        const modelBadge = chosenModel === 'gemini-2.5-flash-lite' ? '⚡ Gemini 2.5 Flash-Lite' : '🧠 Gemini 2.5 Flash';
+
+                        replyText = `✅ *Đã chuyển thành công sang model:*\n👉 *${modelBadge}*\n\n` +
+                            `Kể từ bây giờ, mọi câu hỏi và phân tích của bạn sẽ được xử lý bằng model này!`;
+
+                        replyMarkup = {
+                            inline_keyboard: [
+                                [
+                                    { text: '🔥 Thử Top 5 Trending', callback_data: '/trending5' },
+                                    { text: '⚙️ Đổi lại Model', callback_data: '/model' }
+                                ]
+                            ]
+                        };
                     } else {
-                        replyText = `🌐 Bạn hiện đang ở chế độ *Trò chuyện tự do* (chưa kết nối với dự án cụ thể nào).\n\n` +
-                            `👉 Để kết nối với một dự án: Gõ \`/ask <chủ_sở_hữu>/<tên_repo>\` hoặc gửi thẳng link GitHub vào đây.`;
+                        replyText = `⚠️ Model không hợp lệ. Vui lòng chọn trong danh sách: \`gemini-2.5-flash-lite\` hoặc \`gemini-2.5-flash\`.`;
                     }
                 }
+
 
                 // 1.5 Tự động phát hiện link GitHub repo
                 else if (githubMatch && !reservedKeywords.has(githubMatch[2].toLowerCase())) {
@@ -286,12 +371,14 @@ export default async function handler(req, res) {
                 }
                 // 5. Hội thoại thông thường
                 else {
-                    // Kiểm tra session hiện tại của người dùng
+                    // Kiểm tra session hiện tại của người dùng (dự án và model đang chọn)
                     let { data: session } = await supabase
                         .from('user_sessions')
-                        .select('active_repo')
+                        .select('active_repo, selected_model')
                         .eq('chat_id', chatId)
                         .maybeSingle();
+
+                    const selectedModel = (session && session.selected_model) || 'gemini-2.5-flash-lite';
 
                     // Nếu chưa chọn repo, thử phân tích ngôn ngữ tự nhiên để nhận diện repo được nhắc tới
                     if (!session || !session.active_repo) {
@@ -314,11 +401,16 @@ export default async function handler(req, res) {
                                     // Tự động kích hoạt session
                                     await supabase
                                         .from('user_sessions')
-                                        .upsert({ chat_id: chatId, active_repo: matchedRepoName, last_active: new Date().toISOString() });
+                                        .upsert({ 
+                                            chat_id: chatId, 
+                                            active_repo: matchedRepoName, 
+                                            selected_model: selectedModel,
+                                            last_active: new Date().toISOString() 
+                                        }, { onConflict: 'chat_id' });
 
                                     await sendMessage(chatId, `🎯 _Tự động kết nối hỏi đáp về dự án *${matchedRepoName}* dựa trên câu hỏi của bạn._`, BOT_TOKEN);
 
-                                    session = { active_repo: matchedRepoName };
+                                    session = { active_repo: matchedRepoName, selected_model: selectedModel };
                                     // Xóa lịch sử cũ khi tự động chuyển dự án để tránh loạn ngữ cảnh
                                     await supabase.from('chat_history').delete().eq('chat_id', chatId);
                                 }
@@ -344,14 +436,14 @@ export default async function handler(req, res) {
 
                         if (repo) {
                             await sendChatAction(chatId, 'typing', BOT_TOKEN);
-                            let answer = await answerRepoQuestion(repo.readme, repo.repo_name, text, history || []);
+                            let answer = await answerRepoQuestion(repo.readme, repo.repo_name, text, history || [], selectedModel);
 
                             // Nếu AI xác định câu hỏi nằm ngoài README, tiến hành tìm kiếm Google
                             if (answer.includes('[OUT_OF_SCOPE]')) {
                                 await sendMessage(chatId, `🔍 Câu hỏi nằm ngoài tài liệu README của dự án *${repo.repo_name}*. Đang tìm kiếm thêm thông tin trên internet...`, BOT_TOKEN);
                                 await sendChatAction(chatId, 'typing', BOT_TOKEN);
 
-                                const searchAnswer = await answerWithSearch(text, repo.repo_name, history || []);
+                                const searchAnswer = await answerWithSearch(text, repo.repo_name, history || [], selectedModel);
                                 replyText = `🌐 *[Kết quả tìm kiếm internet về ${repo.repo_name}]*:\n\n${searchAnswer}`;
                             } else {
                                 replyText = answer;
@@ -362,9 +454,10 @@ export default async function handler(req, res) {
                     } else {
                         // Hỏi đáp tự do ngoài dự án
                         await sendChatAction(chatId, 'typing', BOT_TOKEN);
-                        const searchAnswer = await answerWithSearch(text, null, history || []);
+                        const searchAnswer = await answerWithSearch(text, null, history || [], selectedModel);
                         replyText = `🌐 *[Trợ lý AI]*:\n\n${searchAnswer}`;
                     }
+
 
                     // Lưu lịch sử chat
                     await supabase.from('chat_history').insert([

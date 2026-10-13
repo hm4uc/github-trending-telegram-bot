@@ -46,7 +46,8 @@ export async function summarizeWithAI(reposData) {
     }
 }
 
-export async function answerRepoQuestion(readme, repoName, question, history = []) {
+export async function answerRepoQuestion(readme, repoName, question, history = [], userModel = null) {
+    const targetModel = userModel || GEMINI_MODEL;
     const systemInstruction = `
 Bạn là một chatbot hỗ trợ lập trình viên. Nhiệm vụ của bạn là giải đáp thắc mắc về dự án "${repoName}" dựa vào tài liệu README được cung cấp dưới đây.
 
@@ -62,7 +63,7 @@ Nguyên tắc trả lời:
 
     try {
         const model = genAI.getGenerativeModel({
-            model: GEMINI_MODEL,
+            model: targetModel,
             systemInstruction: systemInstruction
         });
 
@@ -83,7 +84,8 @@ Nguyên tắc trả lời:
     }
 }
 
-export async function answerWithSearch(question, repoName = null, history = []) {
+export async function answerWithSearch(question, repoName = null, history = [], userModel = null) {
+    const targetModel = userModel || GEMINI_MODEL;
     let systemInstruction = 'Bạn là một trợ lý ảo thông minh chuyên biệt về các dự án mã nguồn mở và lập trình trên GitHub. ' +
         'Nhiệm vụ của bạn chỉ được phép tìm kiếm và trả lời các câu hỏi liên quan đến các dự án, mã nguồn, thư viện hoặc lập trình viên trên GitHub. ' +
         'TUYỆT ĐỐI không trả lời và không cung cấp bất kỳ thông tin nào ngoài phạm vi GitHub (ví dụ: không trả lời về thời tiết, đời sống, tin tức xã hội, v.v.). Nếu người dùng hỏi các câu hỏi ngoài phạm vi GitHub, hãy lịch sự từ chối và nhắc họ rằng bạn chỉ hỗ trợ hỏi đáp về các dự án GitHub. ' +
@@ -100,7 +102,7 @@ export async function answerWithSearch(question, repoName = null, history = []) 
 
     try {
         const model = genAI.getGenerativeModel({
-            model: GEMINI_MODEL,
+            model: targetModel,
             systemInstruction: systemInstruction,
             tools: [{ googleSearch: {} }]
         });
@@ -123,7 +125,7 @@ export async function answerWithSearch(question, repoName = null, history = []) 
             console.log('🔄 Đang thử lại câu hỏi sử dụng kiến thức có sẵn của AI (không có Google Search)...');
             try {
                 const modelWithoutSearch = genAI.getGenerativeModel({
-                    model: GEMINI_MODEL,
+                    model: targetModel,
                     systemInstruction: systemInstruction
                 });
 
@@ -142,6 +144,7 @@ export async function answerWithSearch(question, repoName = null, history = []) 
         return `❌ Lỗi khi tìm kiếm trực tuyến: ${error.message || error}`;
     }
 }
+
 
 export async function identifyReferencedRepo(question, repoList) {
     const prompt = `
