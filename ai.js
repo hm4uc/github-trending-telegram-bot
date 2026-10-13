@@ -101,21 +101,32 @@ export async function answerWithSearch(question, repoName = null, history = [], 
         parts: [{ text: h.content }]
     }));
 
+    const supportsSearch = targetModel !== 'gemini-3.8-flash';
+
     try {
-        const model = genAI.getGenerativeModel({
+        const modelOptions = {
             model: targetModel,
-            systemInstruction: systemInstruction,
-            tools: [{ googleSearch: {} }]
-        });
+            systemInstruction: systemInstruction
+        };
+        if (supportsSearch) {
+            modelOptions.tools = [{ googleSearch: {} }];
+        }
+
+        const model = genAI.getGenerativeModel(modelOptions);
 
         const chat = model.startChat({
             history: geminiHistory
         });
 
         const result = await chat.sendMessage(question);
-        return result.response.text();
+        const text = result.response.text();
+        if (!supportsSearch) {
+            return `⚠️ _(Lưu ý: Model Gemini 3.8 Flash không hỗ trợ Google Search trên bản Free nên câu trả lời được phân tích từ kiến thức có sẵn của AI)_\n\n` + text;
+        }
+        return text;
     } catch (error) {
         console.error('❌ Lỗi khi hỏi đáp với Google Search:', error);
+
         
         // Cơ chế dự phòng khi hết hạn mức (quota 429) của Google Search trên gói miễn phí
         const isQuotaError = error.status === 429 || 

@@ -171,26 +171,27 @@ export default async function handler(req, res) {
 
                     replyText = `⚙️ *CÀI ĐẶT MODEL AI*\n\n` +
                         `🤖 *Model bạn đang sử dụng:* \`${currentModel}\`\n\n` +
-                        `*Chọn 1 trong 2 model hoạt động tốt nhất dưới đây:*\n\n` +
-                        `1️⃣ *Gemini 2.5 Flash* (Mặc định):\n` +
-                        `   • Tốc độ siêu nhanh, ổn định cao.\n` +
-                        `   • Hỗ trợ Google Search miễn phí hàng ngày.\n\n` +
+                        `*Chi tiết 2 model để bạn lựa chọn:*\n\n` +
+                        `1️⃣ *Gemini 2.5 Flash* (Mặc định - Khuyên dùng):\n` +
+                        `   • Tốc độ siêu nhanh, hạn mức cao (1.500 lượt/ngày).\n` +
+                        `   • ✅ *Có hỗ trợ Google Search miễn phí* khi câu hỏi vượt ngoài README.\n\n` +
                         `2️⃣ *Gemini 3.8 Flash* (Thế hệ mới nhất):\n` +
-                        `   • Trí tuệ và tư duy kỹ thuật cao nhất dòng Flash.\n` +
-                        `   • Xử lý logic và phân tích mã nguồn cực mạnh.\n\n` +
+                        `   • Trí tuệ và tư duy kỹ thuật sâu nhất dòng Flash.\n` +
+                        `   • Hạn mức thấp hơn (100-250 lượt/ngày).\n` +
+                        `   • ⚠️ *KHÔNG hỗ trợ tìm kiếm Google* trên bản Free (chỉ phân tích thông tin có sẵn trong README).\n\n` +
                         `👇 _Chạm vào nút bên dưới để chuyển đổi ngay:_`;
 
                     replyMarkup = {
                         inline_keyboard: [
                             [
                                 { 
-                                    text: currentModel === 'gemini-2.5-flash' ? '✅ ⚡ 2.5 Flash (Đang dùng)' : '⚡ 2.5 Flash (Tốc độ cao & Search)', 
+                                    text: currentModel === 'gemini-2.5-flash' ? '✅ ⚡ 2.5 Flash (Có Search Google)' : '⚡ 2.5 Flash (Có Search Google)', 
                                     callback_data: '/setmodel gemini-2.5-flash' 
                                 }
                             ],
                             [
                                 { 
-                                    text: currentModel === 'gemini-3.8-flash' ? '✅ 🚀 3.8 Flash (Đang dùng)' : '🚀 3.8 Flash (Thế hệ mới nhất)', 
+                                    text: currentModel === 'gemini-3.8-flash' ? '✅ 🚀 3.8 Flash (Không Search web)' : '🚀 3.8 Flash (Không Search web)', 
                                     callback_data: '/setmodel gemini-3.8-flash' 
                                 }
                             ],
@@ -215,10 +216,16 @@ export default async function handler(req, res) {
                                 last_active: new Date().toISOString() 
                             }, { onConflict: 'chat_id' });
 
-                        const modelBadge = chosenModel === 'gemini-2.5-flash' ? '⚡ Gemini 2.5 Flash' : '🚀 Gemini 3.8 Flash';
+                        const modelBadge = chosenModel === 'gemini-2.5-flash' ? '⚡ Gemini 2.5 Flash (Có Search Google)' : '🚀 Gemini 3.8 Flash (Không Search web)';
 
-                        replyText = `✅ *Đã chuyển thành công sang model:*\n👉 *${modelBadge}*\n\n` +
-                            `Kể từ bây giờ, mọi câu hỏi và phân tích của bạn sẽ được xử lý bằng model này!`;
+                        let extraNotice = '';
+                        if (chosenModel === 'gemini-3.8-flash') {
+                            extraNotice = `\n\n⚠️ *Lưu ý*: Model 3.8 Flash trên bản Free không hỗ trợ tìm kiếm Google, chỉ phân tích dữ liệu có sẵn trong tài liệu README.`;
+                        } else {
+                            extraNotice = `\n\n✅ Model 2.5 Flash hỗ trợ đầy đủ tìm kiếm Google khi thông tin nằm ngoài README.`;
+                        }
+
+                        replyText = `✅ *Đã chuyển thành công sang model:*\n👉 *${modelBadge}*` + extraNotice + `\n\nKể từ bây giờ, mọi câu hỏi của bạn sẽ được xử lý bằng model này!`;
 
                         replyMarkup = {
                             inline_keyboard: [
@@ -232,6 +239,7 @@ export default async function handler(req, res) {
                         replyText = `⚠️ Model không hợp lệ. Vui lòng chọn trong danh sách: \`gemini-2.5-flash\` hoặc \`gemini-3.8-flash\`.`;
                     }
                 }
+
 
 
 
