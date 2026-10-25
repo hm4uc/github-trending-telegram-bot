@@ -31,10 +31,7 @@
 
 - [Overview & Highlights](#-overview--highlights)
 - [Key Features](#-key-features)
-- [System Architecture & Flows](#-system-architecture--flows)
-  - [1. High-Level System Architecture](#1-high-level-system-architecture)
-  - [2. Daily Scheduled Digest Flow (Vercel Cron)](#2-daily-scheduled-digest-flow-vercel-cron)
-  - [3. Interactive RAG & Search Grounding Flow](#3-interactive-rag--search-grounding-flow)
+- [System Architecture](#-system-architecture)
 - [Project Structure](#-project-structure)
 - [Bot Commands & Interactive UI](#-bot-commands--interactive-ui)
 - [Database Schema (Supabase PostgreSQL)](#-database-schema-supabase-postgresql)
@@ -76,162 +73,45 @@ Beyond automated broadcasts, the bot acts as an **interactive AI documentation a
 
 ---
 
-## 🏗️ System Architecture & Flows
+## 🏗️ System Architecture
 
-All diagrams below are rendered natively using **Mermaid** in GitHub Markdown (no static images).
+A high-level architectural overview illustrating how the Telegram Client, Vercel Serverless Platform, Google Gemini AI, Supabase PostgreSQL, and GitHub Trending Scraper integrate cleanly:
 
-### 1. High-Level System Architecture
+<p align="center">
+  <img src="./assets/architecture.svg" alt="High-Level System Architecture" width="100%" />
+</p>
 
-This architectural blueprint outlines how Vercel Serverless Functions, Supabase PostgreSQL, Google Gemini AI, and Telegram Bot API integrate seamlessly:
-
-```mermaid
-flowchart TB
-    subgraph Clients["📱 Clients & Channels"]
-        TG_User["Telegram User / Subscribers"]
-        TG_Admin["Admin / Channel"]
-    end
-
-    subgraph Vercel["☁️ Vercel Serverless Platform"]
-        CronJob["⏰ Vercel Cron\n(Daily at 00:00 UTC)"]
-        CronHandler["/api/cron.js\n(Daily Broadcast Handler)"]
-        WebhookHandler["/api/webhook.js\n(Interactive Bot Webhook)"]
-        LocalCLI["main.js\n(Local Orchestrator CLI)"]
-    end
-
-    subgraph Intelligence["🧠 Intelligence & AI Engine"]
-        Gemini25["Google Gemini 2.5 Flash\n(Fast + Free Google Search Grounding)"]
-        Gemini38["Google Gemini 3.8 Flash\n(Deep Technical Reasoning)"]
-        GoogleSearch["🔍 Google Search Grounding\n(Internet Fallback)"]
-    end
-
-    subgraph DataLayer["💾 Persistence Layer (Supabase PostgreSQL)"]
-        T_Repos[("repositories\n(Cache: name, readme, lang, desc)")]
-        T_Sessions[("user_sessions\n(active_repo, selected_model)")]
-        T_Subscribers[("subscribers\n(chat_id, is_active, names)")]
-        T_History[("chat_history\n(chat_id, role, content)")]
-    end
-
-    subgraph External["🌐 External Web Sources"]
-        GHTrending["GitHub Trending Page\n(github.com/trending)"]
-        GHRepos["GitHub Public Repositories\n(Cheerio HTML Scraper)"]
-        TGApi["Telegram Bot API\n(sendMessage, sendChatAction, answerCallback)"]
-    end
-
-    CronJob -->|Triggers HTTP GET| CronHandler
-    CronHandler -->|Scrapes Top 10| GHTrending
-    CronHandler -->|Fetches Full README| GHRepos
-    CronHandler -->|Upsert Cache| T_Repos
-    CronHandler -->|Query Active Users| T_Subscribers
-    CronHandler -->|Summarize Batch| Gemini25
-    CronHandler -->|Broadcast with 40ms Throttling| TGApi
-
-    TG_User <-->|Webhook Updates & Commands| TGApi
-    TGApi <-->|Payload / Callback Query| WebhookHandler
-
-    WebhookHandler <-->|Session & Model Prefs| T_Sessions
-    WebhookHandler <-->|Context & Rate Limiting| T_History
-    WebhookHandler <-->|Retrieve Repo README| T_Repos
-    WebhookHandler -->|Prompt RAG / Query| Gemini25
-    WebhookHandler -->|Prompt RAG / Query| Gemini38
-    Gemini25 -.->|Fallback if Out-of-Scope| GoogleSearch
-    WebhookHandler -->|Reply Markdown / Inline Keyboard| TGApi
-
-    LocalCLI -->|Manual Scrape| GHTrending
-    LocalCLI -->|Direct Broadcast| TG_Admin
-```
-
----
-
-### 2. Daily Scheduled Digest Flow (Vercel Cron)
-
-The scheduled broadcast workflow executes every day at 00:00 UTC (07:00 AM ICT) without maintaining persistent server instances:
+<details>
+<summary><b>🔍 View Mermaid Source Code</b></summary>
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor VercelCron as ⏰ Vercel Cron (00:00 UTC)
-    participant CronAPI as ⚡ api/cron.js
-    participant Scraper as 🕷️ scraper.js
-    participant GitHub as 🐙 GitHub Trending
-    participant Supabase as 🗄️ Supabase DB
-    participant Gemini as 🧠 Gemini AI (2.5 Flash)
-    participant Telegram as ✈️ Telegram API
-    actor Subscribers as 👥 Active Subscribers
-
-    VercelCron->>CronAPI: Trigger GET /api/cron
-    CronAPI->>Scraper: Call getGithubTrending()
-    Scraper->>GitHub: Fetch https://github.com/trending
-    Scraper->>GitHub: Fetch full README for Top 10 repos (Parallel)
-    GitHub-->>Scraper: HTML content (markdown-body)
-    Scraper->>Supabase: Upsert top 10 repos to 'repositories' table
-    Scraper-->>CronAPI: Return formatted repo objects
-
-    CronAPI->>Gemini: summarizeWithAI(reposData) [Senior Tech Lead Prompt]
-    Gemini-->>CronAPI: Sharp Markdown Digest (Vietnamese)
-
-    CronAPI->>Supabase: Query active subscribers (is_active = true)
-    Supabase-->>CronAPI: Return subscriber chat IDs
-
-    loop For each subscriber (Throttled with 40ms sleep)
-        CronAPI->>Telegram: sendMessage(chatId, digest, Markdown)
-        alt Success (200 OK)
-            Telegram-->>Subscribers: Deliver morning digest
-        else Markdown Parse Error
-            CronAPI->>Telegram: Retry with plain text
-            Telegram-->>Subscribers: Deliver plain text digest
-        else Bot Blocked (403 Forbidden)
-            CronAPI->>Supabase: Update subscriber is_active = false
-        end
+flowchart LR
+    subgraph Clients["📱 Clients & Triggers"]
+        TG["Telegram Client<br/>(Bot API)"]
+        Cron["Vercel Cron<br/>(00:00 UTC)"]
     end
 
-    CronAPI-->>VercelCron: 200 OK (sentSuccess count, blocked count)
+    subgraph Serverless["⚡ Vercel Serverless (Node.js)"]
+        Webhook["/api/webhook.js<br/>(Interactive Q&A & Commands)"]
+        CronAPI["/api/cron.js<br/>(Daily Broadcast Handler)"]
+    end
+
+    subgraph DataAI["🌐 Data, AI & Persistence"]
+        GitHub["GitHub Trending<br/>(Cheerio Scraper)"]
+        Gemini["Google Gemini AI<br/>(2.5 & 3.8 Flash + Search)"]
+        Supabase[("Supabase PostgreSQL<br/>(Cache, Sessions, History)")]
+    end
+
+    TG <-->|Commands & Replies| Webhook
+    Cron -->|Daily Trigger| CronAPI
+    CronAPI -->|Broadcast Digest| TG
+
+    Webhook & CronAPI -->|Fetch & Scrape| GitHub
+    Webhook & CronAPI <-->|Summarize & RAG| Gemini
+    Webhook & CronAPI <-->|Read & Write Cache| Supabase
 ```
 
----
-
-### 3. Interactive RAG & Search Grounding Flow
-
-When a user submits a question or clicks an inline button, the webhook orchestrates session management, retrieval-augmented answering, and live search fallback:
-
-```mermaid
-flowchart TD
-    Start([User sends Message or clicks Inline Button]) --> Webhook[api/webhook.js receives Update]
-    Webhook --> AckCallback{Is Callback Query?}
-    AckCallback -->|Yes| Ack[answerCallbackQuery immediately] --> RateLimit[Check Rate Limit: max 15 msg/min]
-    AckCallback -->|No| Typing[Send Chat Action: typing] --> RateLimit
-
-    RateLimit --> IsLimited{Rate Limit Exceeded?}
-    IsLimited -->|Yes| RateLimitMsg[Reply: 'Too fast, please wait 1 min'] --> Done([End])
-    IsLimited -->|No| CheckCmd{Parse Command or Input}
-
-    CheckCmd -->|/start or /help| Welcome[Register Subscriber + Send Interactive Menu]
-    CheckCmd -->|/trending5 or /trending10| Trending[Query Latest Repos from Supabase + Gemini Summary]
-    CheckCmd -->|/model or /setmodel| SwitchModel[Update user_sessions: 2.5-flash or 3.8-flash]
-    CheckCmd -->|/status| Status[Display Active Repo & Current Model]
-    CheckCmd -->|/subscribe or /unsubscribe| ToggleSub[Update subscribers.is_active]
-    CheckCmd -->|/exit or /clear| ClearSession[Delete user_sessions & Clear chat_history]
-    CheckCmd -->|GitHub URL detected| ScrapeRepo[Scrape Repo + Upsert DB + Set Active Repo + Auto Summary]
-    CheckCmd -->|Natural Text / Question| ResolveRepo[Check active_repo in session]
-
-    ResolveRepo --> HasActiveRepo{Active Repo Set?}
-    HasActiveRepo -->|No| AutoDetect{Identify Repo mentioned in question?}
-    AutoDetect -->|Found| BindRepo[Auto-bind active_repo in user_sessions] --> FetchReadme[Fetch README from DB]
-    AutoDetect -->|None| GeneralQA[Ask Gemini with General GitHub Assistant prompt] --> SendTG
-
-    HasActiveRepo -->|Yes| FetchReadme
-    FetchReadme --> RAGPrompt[Prompt Gemini with README Context]
-    RAGPrompt --> ScopeCheck{Response starts with [OUT_OF_SCOPE]?}
-
-    ScopeCheck -->|No| SendTG[Send Response with Markdown to Telegram]
-    ScopeCheck -->|Yes| CanSearch{Model is gemini-2.5-flash?}
-
-    CanSearch -->|Yes| GoogleSearch[Invoke Gemini with Google Search Tool Grounding] --> SendTG
-    CanSearch -->|No (3.8 Flash)| DirectFallback[Return out-of-scope explanation without web search] --> SendTG
-
-    SendTG --> ErrorCheck{Markdown Parse Success?}
-    ErrorCheck -->|Success| SaveHistory[Save Chat History to DB] --> Done
-    ErrorCheck -->|Failed| RetryPlain[Retry sending as Plain Text] --> SaveHistory
-```
+</details>
 
 ---
 

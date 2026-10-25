@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" width="100%" height="auto" style="background:#0d1117; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#161b22" />
+      <stop offset="50%" stop-color="#0d1117" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+
+    <linearGradient id="geminiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4285F4" />
+      <stop offset="50%" stop-color="#9B72CB" />
+      <stop offset="100%" stop-color="#D96570" />
+    </linearGradient>
+
+    <!-- Card Gradients -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1f242c" />
+      <stop offset="100%" stop-color="#161b22" />
+    </linearGradient>
+
+    <!-- Marker Arrowheads -->
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#229ED9" />
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#3ECF8E" />
+    </marker>
+    <marker id="arrowPurple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#A371F7" />
+    </marker>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#F0883E" />
+    </marker>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#8b949e" />
+    </marker>
+  </defs>
+
+  <!-- Border & Canvas -->
+  <rect width="960" height="500" rx="16" fill="url(#bgGlow)" stroke="#30363d" stroke-width="1.5" />
+
+  <!-- Title Badge -->
+  <g transform="translate(320, 24)">
+    <rect width="320" height="34" rx="17" fill="#1f242c" stroke="#388bfd" stroke-width="1.2" />
+    <text x="160" y="22" text-anchor="middle" fill="#58a6ff" font-size="13" font-weight="600" letter-spacing="0.5">HIGH-LEVEL SYSTEM ARCHITECTURE</text>
+  </g>
+
+  <!-- ==================== LEFT COLUMN: CLIENTS & TRIGGERS ==================== -->
+  <!-- 1. Telegram Client -->
+  <g transform="translate(36, 90)">
+    <rect width="220" height="150" rx="12" fill="url(#cardGrad)" stroke="#229ED9" stroke-width="1.5" />
+    <!-- Telegram Logo Circle -->
+    <circle cx="40" cy="40" r="18" fill="#229ED9" />
+    <path d="M 33 40 L 46 34 L 44 46 L 39 42 L 36 44 L 36.5 41 Z" fill="#ffffff" />
+    <path d="M 39 42 L 44 36 L 37.5 40.5 Z" fill="#bfe5fb" />
+    <text x="70" y="37" fill="#ffffff" font-size="15" font-weight="700">Telegram Client</text>
+    <text x="70" y="53" fill="#8b949e" font-size="11">Telegram Bot API</text>
+    
+    <line x1="20" y1="75" x2="200" y2="75" stroke="#30363d" stroke-width="1" />
+    <text x="24" y="96" fill="#c9d1d9" font-size="12">• Subscribed Users &amp; Chats</text>
+    <text x="24" y="116" fill="#c9d1d9" font-size="12">• Interactive Inline Buttons</text>
+    <text x="24" y="136" fill="#c9d1d9" font-size="12">• Commands &amp; Repo Q&amp;A</text>
+  </g>
+
+  <!-- 2. Vercel Cron Trigger -->
+  <g transform="translate(36, 290)">
+    <rect width="220" height="150" rx="12" fill="url(#cardGrad)" stroke="#30363d" stroke-width="1.5" />
+    <!-- Clock / Schedule Icon -->
+    <circle cx="40" cy="40" r="18" fill="#21262d" stroke="#f0883e" stroke-width="1.5" />
+    <path d="M 40 30 L 40 40 L 47 43" fill="none" stroke="#f0883e" stroke-width="2" stroke-linecap="round" />
+    <text x="70" y="37" fill="#ffffff" font-size="15" font-weight="700">Vercel Cron</text>
+    <text x="70" y="53" fill="#8b949e" font-size="11">Automated Scheduler</text>
+    
+    <line x1="20" y1="75" x2="200" y2="75" stroke="#30363d" stroke-width="1" />
+    <text x="24" y="96" fill="#c9d1d9" font-size="12">• Schedule: 00:00 UTC (7h AM)</text>
+    <text x="24" y="116" fill="#c9d1d9" font-size="12">• Trigger: GET /api/cron</text>
+    <text x="24" y="136" fill="#c9d1d9" font-size="12">• Zero Server Maintenance</text>
+  </g>
+
+  <!-- ==================== CENTER COLUMN: SERVERLESS ENGINE ==================== -->
+  <g transform="translate(360, 110)">
+    <rect width="240" height="310" rx="14" fill="#161b22" stroke="#58a6ff" stroke-width="2" />
+    
+    <!-- Header with Vercel & Node logos -->
+    <rect x="0" y="0" width="240" height="60" rx="14" fill="#1f242c" />
+    <!-- Vercel Triangle -->
+    <polygon points="35,42 47,20 59,42" fill="#ffffff" />
+    <!-- Node.js Logo -->
+    <g transform="translate(70, 22) scale(0.9)">
+      <polygon points="12,2 22,8 22,20 12,26 2,20 2,8" fill="#339933" />
+      <text x="12" y="17" fill="#ffffff" font-size="9" font-weight="bold" text-anchor="middle">JS</text>
+    </g>
+    <text x="105" y="35" fill="#ffffff" font-size="16" font-weight="700">Vercel Serverless</text>
+    <text x="105" y="50" fill="#339933" font-size="11" font-weight="600">Node.js Runtime</text>
+
+    <!-- Sub-module 1: Webhook -->
+    <g transform="translate(16, 75)">
+      <rect width="208" height="62" rx="8" fill="#21262d" stroke="#30363d" stroke-width="1" />
+      <text x="12" y="24" fill="#79c0ff" font-size="13" font-weight="600">/api/webhook.js</text>
+      <text x="12" y="42" fill="#8b949e" font-size="11">Interactive Q&amp;A, Model Switch</text>
+      <text x="12" y="54" fill="#8b949e" font-size="10">Rate Limit (15 msg/m), Inline Keyboards</text>
+    </g>
+
+    <!-- Sub-module 2: Cron -->
+    <g transform="translate(16, 150)">
+      <rect width="208" height="62" rx="8" fill="#21262d" stroke="#30363d" stroke-width="1" />
+      <text x="12" y="24" fill="#7ee787" font-size="13" font-weight="600">/api/cron.js</text>
+      <text x="12" y="42" fill="#8b949e" font-size="11">Daily Scrape &amp; Batch Broadcast</text>
+      <text x="12" y="54" fill="#8b949e" font-size="10">40ms Rate-limiting &amp; Auto-prune</text>
+    </g>
+
+    <!-- Sub-module 3: Orchestrator / Scraper -->
+    <g transform="translate(16, 225)">
+      <rect width="208" height="65" rx="8" fill="#21262d" stroke="#30363d" stroke-width="1" />
+      <text x="12" y="24" fill="#d2a8ff" font-size="13" font-weight="600">ai.js &amp; scraper.js</text>
+      <text x="12" y="42" fill="#8b949e" font-size="11">Cheerio HTML Parser + RAG Logic</text>
+      <text x="12" y="55" fill="#8b949e" font-size="10">Fallback to Google Grounding</text>
+    </g>
+  </g>
+
+  <!-- ==================== RIGHT COLUMN: EXTERNAL SERVICES & PERSISTENCE ==================== -->
+  
+  <!-- 1. GitHub & Cheerio Scraper -->
+  <g transform="translate(700, 70)">
+    <rect width="224" height="110" rx="12" fill="url(#cardGrad)" stroke="#f0883e" stroke-width="1.5" />
+    <!-- GitHub Octocat Mark -->
+    <circle cx="36" cy="36" r="16" fill="#f0f6fc" />
+    <path d="M 36 24 C 29.37 24 24 29.37 24 36 C 24 41.3 27.44 45.8 32.2 47.38 C 32.8 47.49 33.02 47.12 33.02 46.8 C 33.02 46.52 33.01 45.76 33.01 44.76 C 29.67 45.49 28.97 43.15 28.97 43.15 C 28.42 41.77 27.63 41.4 27.63 41.4 C 26.55 40.66 27.72 40.67 27.72 40.67 C 28.92 40.75 29.55 41.91 29.55 41.91 C 30.62 43.74 32.36 43.21 33.05 42.9 C 33.16 42.13 33.47 41.6 33.81 41.3 C 31.14 41 28.34 39.97 28.34 35.37 C 28.34 34.06 28.81 32.99 29.58 32.15 C 29.44 31.85 29.04 30.62 29.68 28.97 C 29.68 28.97 30.69 28.65 32.98 30.2 C 33.94 29.94 34.96 29.8 35.98 29.8 C 37 29.8 38.03 29.94 38.98 30.2 C 41.28 28.65 42.28 28.97 42.28 28.97 C 42.93 30.62 42.52 31.85 42.39 32.15 C 43.16 32.99 43.62 34.06 43.62 35.37 C 43.62 39.98 40.81 41 38.14 41.29 C 38.56 41.65 38.95 42.38 38.95 43.51 C 38.95 45.13 38.94 46.43 38.94 46.8 C 38.94 47.13 39.15 47.5 39.76 47.38 C 44.53 45.79 47.96 41.3 47.96 36 C 47.96 29.37 42.63 24 36 24 Z" fill="#161b22" />
+    <text x="64" y="34" fill="#ffffff" font-size="14" font-weight="700">GitHub Trending</text>
+    <text x="64" y="49" fill="#f0883e" font-size="11">Cheerio HTML Parser</text>
+    
+    <text x="16" y="80" fill="#c9d1d9" font-size="11">• Scrapes Top 10 Trending</text>
+    <text x="16" y="98" fill="#c9d1d9" font-size="11">• Reads Full markdown-body</text>
+  </g>
+
+  <!-- 2. Google Gemini AI Engine -->
+  <g transform="translate(700, 205)">
+    <rect width="224" height="130" rx="12" fill="url(#cardGrad)" stroke="#a371f7" stroke-width="1.5" />
+    <!-- Gemini Sparkle Star -->
+    <circle cx="36" cy="36" r="16" fill="#1f242c" stroke="url(#geminiGrad)" stroke-width="1.5" />
+    <path d="M 36 26 C 36 31.5 31.5 36 26 36 C 31.5 36 36 40.5 36 46 C 36 40.5 40.5 36 46 36 C 40.5 36 36 31.5 36 26 Z" fill="url(#geminiGrad)" />
+    <text x="64" y="34" fill="#ffffff" font-size="14" font-weight="700">Google Gemini AI</text>
+    <text x="64" y="49" fill="#a371f7" font-size="11">2.5 &amp; 3.8 Flash Models</text>
+
+    <text x="16" y="78" fill="#c9d1d9" font-size="11">• Senior Tech Lead Summarizer</text>
+    <text x="16" y="96" fill="#c9d1d9" font-size="11">• RAG on README Documentation</text>
+    <text x="16" y="114" fill="#79c0ff" font-size="11">• Auto Google Search Grounding</text>
+  </g>
+
+  <!-- 3. Supabase PostgreSQL -->
+  <g transform="translate(700, 360)">
+    <rect width="224" height="110" rx="12" fill="url(#cardGrad)" stroke="#3ECF8E" stroke-width="1.5" />
+    <!-- Supabase Lightning Mark -->
+    <circle cx="36" cy="36" r="16" fill="#1f242c" stroke="#3ECF8E" stroke-width="1.5" />
+    <path d="M 40 26 L 31 37 L 36 37 L 32 46 L 41 35 L 36 35 Z" fill="#3ECF8E" />
+    <text x="64" y="34" fill="#ffffff" font-size="14" font-weight="700">Supabase (Postgres)</text>
+    <text x="64" y="49" fill="#3ECF8E" font-size="11">Relational Database</text>
+
+    <text x="16" y="78" fill="#c9d1d9" font-size="11">• repositories (Cache &amp; README)</text>
+    <text x="16" y="96" fill="#c9d1d9" font-size="11">• user_sessions &amp; subscribers</text>
+  </g>
+
+  <!-- ==================== CONNECTING ARROWS & LABELS ==================== -->
+  
+  <!-- Telegram <-> Serverless Webhook -->
+  <path d="M 256 160 L 360 160" stroke="#229ED9" stroke-width="2" marker-end="url(#arrowBlue)" fill="none" />
+  <text x="308" y="152" fill="#229ED9" font-size="10" font-weight="600" text-anchor="middle">Webhook</text>
+
+  <!-- Serverless -> Telegram (Broadcast) -->
+  <path d="M 360 185 L 256 185" stroke="#7ee787" stroke-width="2" marker-end="url(#arrowGreen)" stroke-dasharray="4,3" fill="none" />
+  <text x="308" y="200" fill="#7ee787" font-size="10" font-weight="600" text-anchor="middle">Digest / Reply</text>
+
+  <!-- Cron -> Serverless Cron -->
+  <path d="M 256 360 L 360 260" stroke="#f0883e" stroke-width="2" marker-end="url(#arrowOrange)" fill="none" />
+  <text x="295" y="315" fill="#f0883e" font-size="10" font-weight="600" text-anchor="middle">00:00 UTC</text>
+
+  <!-- Serverless -> GitHub Scraper -->
+  <path d="M 600 160 L 700 125" stroke="#f0883e" stroke-width="2" marker-end="url(#arrowOrange)" fill="none" />
+  <text x="650" y="132" fill="#f0883e" font-size="10" font-weight="600" text-anchor="middle">Scrape</text>
+
+  <!-- Serverless <-> Gemini AI -->
+  <path d="M 600 260 L 700 260" stroke="#a371f7" stroke-width="2" marker-end="url(#arrowPurple)" fill="none" />
+  <text x="650" y="252" fill="#a371f7" font-size="10" font-weight="600" text-anchor="middle">Prompt / RAG</text>
+
+  <!-- Serverless <-> Supabase DB -->
+  <path d="M 600 340 L 700 405" stroke="#3ECF8E" stroke-width="2" marker-end="url(#arrowGreen)" fill="none" />
+  <text x="650" y="380" fill="#3ECF8E" font-size="10" font-weight="600" text-anchor="middle">SQL Cache</text>
+
+</svg>
